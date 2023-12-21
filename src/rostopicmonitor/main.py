@@ -41,7 +41,14 @@ def start_process(args):
 
     stats_dict = subscribe_to(topics_list)
 
-    rospy.spin()  # simply keeps python from exiting until this node is stopped
+    mon_duration = args.duration
+    if mon_duration < 1:
+        # simply keeps python from exiting until this node is stopped
+        rospy.spin()
+    else:
+        # spin ROS for given time
+        rospy.sleep(mon_duration)
+        rospy.signal_shutdown("timeout")
 
     for stats in stats_dict.values():
         stats.stop()
@@ -125,9 +132,22 @@ def get_all_publishers():
 ## =====================================================
 
 
+def int_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"expected positive int, invalid value: {value}")
+    return ivalue
+
+
 def main():
     parser = argparse.ArgumentParser(description="ROS parse tools")
     parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
+    parser.add_argument(
+        "--duration",
+        action="store",
+        type=int_positive,
+        help="Set monitor time in seconds. Stop application after timeout.",
+    )
     parser.add_argument(
         "--outfile",
         action="store",
