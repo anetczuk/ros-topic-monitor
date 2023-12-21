@@ -3,6 +3,11 @@
 set -eu
 
 
+##
+## script prepares venv virtual environment, installs required dependencies and creates usefull shortcuts
+##
+
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 SRC_DIR=$(realpath "$SCRIPT_DIR/../src")
@@ -10,6 +15,7 @@ SRC_DIR=$(realpath "$SCRIPT_DIR/../src")
 
 ARGS=()
 NO_PROMPT=false
+VENV_PATH=""
 
 while :; do
     if [ -z "${1+x}" ]; then
@@ -19,7 +25,9 @@ while :; do
 
     case "$1" in
       --no-prompt)  NO_PROMPT=true 
-                    shift ;;
+                    shift 1 ;;
+      --dir)        VENV_PATH="$2" 
+                    shift 2 ;;
       *)  ARGS+=($1)
           shift ;;
     esac
@@ -31,8 +39,13 @@ if [ "${#ARGS[@]}" -gt 0 ]; then
     VENV_SUBDIR=${ARGS[0]}
 fi
 
-VENV_DIR="$SCRIPT_DIR/../venv/$VENV_SUBDIR"
+if [ "${VENV_PATH}" != "" ]; then
+    VENV_DIR="${VENV_PATH}"
+else
+    VENV_DIR="$SCRIPT_DIR/../venv/$VENV_SUBDIR"
+fi
 
+VENV_DIR=$(realpath "$VENV_DIR")
 
 ### if directory exists then prompt to delete
 
@@ -62,6 +75,48 @@ python3.8 -m venv $VENV_DIR
 # python3 -m venv $VENV_DIR
 # python2 -m virtualenv $VENV_DIR
 
+
+### ======================================================
+
+
+## create script inside venv directory
+## 1 -- content
+## 2 -- output scritpt
+create_script() {
+    local CONTENT="$1"
+    local SCRIPT_PATH="$2"
+    
+    echo "$SCRIPT_CONTENT" > "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+
+    echo "created script: $SCRIPT_PATH"
+}
+
+
+## create shortcut script inside venv directory
+## 1 -- command
+## 2 -- output scritpt
+create_venv_shortcut() {
+    local COMMAND="$1"
+    local SCRIPT_PATH="$2"
+    
+    local SCRIPT_CONTENT='#!/bin/bash
+##
+## File was generated automatically. Any change will be lost. 
+##
+
+set -eu
+
+'
+
+    ## concatenate command
+    local SCRIPT_CONTENT="${SCRIPT_CONTENT}${COMMAND}"
+
+    create_script "$SCRIPT_CONTENT" "$SCRIPT_PATH"
+}
+
+
+### ======================================================
 
 ### creating venv start script
 
@@ -115,41 +170,9 @@ rm $tmpfile
 '
 
 SCRIPT_CONTENT="${SCRIPT_CONTENT//'$VENV_ROOT_DIR'/$VENV_DIR}"
-SCRIPT_PATH="$VENV_DIR/activatevenv.sh"
-START_VENV_SCRIPT_PATH="$SCRIPT_PATH"
-echo "$SCRIPT_CONTENT" > "$SCRIPT_PATH"
-chmod +x "$SCRIPT_PATH"
+START_VENV_SCRIPT_PATH="$VENV_DIR/activatevenv.sh"
 
-
-## create shortcut script inside venv directory
-## 1 -- command
-## 2 -- output scritpt
-create_venv_shortcut() {
-    local COMMAND="$1"
-    local SCRIPT_PATH="$2"
-    
-    local SCRIPT_CONTENT='#!/bin/bash
-##
-## File was generated automatically. Any change will be lost. 
-##
-
-set -eu
-
-'
-
-    ## concatenate command
-    local SCRIPT_CONTENT="${SCRIPT_CONTENT}${COMMAND}"
-    
-    echo "$SCRIPT_CONTENT" > "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-}
-
-
-### creating project start script
-create_venv_shortcut "$VENV_DIR/activatevenv.sh \"rostopicmon.py \$@; exit\"" "$VENV_DIR/rostopicmon.sh"
-# create_venv_shortcut "$VENV_DIR/activatevenv.sh \"$SRC_DIR/rostopicmon.py \$@; exit\"" "$VENV_DIR/rostopicmon.sh"
-
-create_venv_shortcut "$VENV_DIR/activatevenv.sh \"$SRC_DIR/testrostopicmonitor/runtests.py \$@; exit\"" "$VENV_DIR/runtests.sh"
+create_script "$SCRIPT_CONTENT" "$START_VENV_SCRIPT_PATH"
 
 
 ### install required packages
@@ -157,5 +180,12 @@ echo "Installing dependencies"
 # $START_VENV_SCRIPT_PATH "$SCRIPT_DIR/../src/install-deps.sh; exit"
 $START_VENV_SCRIPT_PATH "$SCRIPT_DIR/../src/install-package.sh --venv; exit"
 
+echo ""
 
-echo "to activate environment run: $VENV_DIR/activatevenv.sh"
+### creating project start script
+create_venv_shortcut "$VENV_DIR/activatevenv.sh \"rostopicmon.py \$@; exit\"" "$VENV_DIR/rostopicmon.sh"
+# create_venv_shortcut "$VENV_DIR/activatevenv.sh \"$SRC_DIR/rostopicmon.py \$@; exit\"" "$VENV_DIR/rostopicmon.sh"
+
+create_venv_shortcut "$VENV_DIR/activatevenv.sh \"$SRC_DIR/testrostopicmonitor/runtests.py \$@; exit\"" "$VENV_DIR/runtests.sh"
+
+echo "to activate environment run: $START_VENV_SCRIPT_PATH"
