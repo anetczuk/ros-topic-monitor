@@ -8,7 +8,6 @@
 #
 
 import sys
-import os
 import logging
 import argparse
 
@@ -36,11 +35,11 @@ def start_process(args):
     init_ros_node(args.logall)
 
     # ['/rosout', '/rosout_agg', '/turtle1/cmd_vel', '/turtle1/color_sensor', '/turtle1/pose']
-    _LOGGER.info(f"subscribing to topics: {topics_list}")
+    _LOGGER.info("subscribing to topics: %s", topics_list)
 
-    stats_dict = subscribe_to( topics_list )
+    stats_dict = subscribe_to(topics_list)
 
-    rospy.spin()                            # simply keeps python from exiting until this node is stopped
+    rospy.spin()  # simply keeps python from exiting until this node is stopped
 
     for stats in stats_dict.values():
         stats.stop()
@@ -49,7 +48,7 @@ def start_process(args):
         stats.printInfo()
 
 
-def subscribe_to( topic_list ):
+def subscribe_to(topic_list):
     stats_dict = {}
     for topic in topic_list:
         topic_stats = ROSTopicStats(topic)
@@ -63,7 +62,7 @@ def subscribe_to( topic_list ):
 
 def init_ros_node(logall=False):
     # anonymous=True flag means that rospy will choose a unique name
-    rospy.init_node('topic_monitor', anonymous=True)
+    rospy.init_node("topic_monitor", anonymous=True)
     rospy.on_shutdown(shutdown_node)
 
     # configure loggers AFTER 'init_node'
@@ -71,16 +70,16 @@ def init_ros_node(logall=False):
 
     main_logger = logging.getLogger(_MAIN_LOGGER_NAME)
     if logall:
-        main_logger.setLevel( logging.DEBUG )
+        main_logger.setLevel(logging.DEBUG)
     else:
-        main_logger.setLevel( logging.INFO )
+        main_logger.setLevel(logging.INFO)
 
     # configure logger to receive messages to command line
-    consoleHandler = logging.StreamHandler( stream=sys.stdout )
-    formatter = logging.Formatter('[%(levelname)-8s] %(name)-12s: %(message)s')
+    consoleHandler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter("[%(levelname)-8s] %(name)-12s: %(message)s")
     consoleHandler.setFormatter(formatter)
 
-    main_logger.addHandler( consoleHandler )
+    main_logger.addHandler(consoleHandler)
 
 
 def shutdown_node():
@@ -92,7 +91,7 @@ def get_all_publishers():
     publishers = pubs_subs[0]
 
     topics_list = set()
-    topics_list.update( [ pub[0] for pub in publishers ] )
+    topics_list.update([pub[0] for pub in publishers])
     return topics_list
 
 
@@ -100,8 +99,8 @@ def get_all_publishers():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='ROS parse tools')
-    parser.add_argument( '-la', '--logall', action='store_true', help='Log all messages' )
+    parser = argparse.ArgumentParser(description="ROS parse tools")
+    parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
     # parser.add_argument( '--outdir', action='store', required=True, default="",
     #                      help="Path to output dir" )
 
@@ -110,5 +109,5 @@ def main():
     start_process(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

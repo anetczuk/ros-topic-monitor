@@ -6,9 +6,9 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-from rostopicmonitor.sizecalculator import AbstractCalculator, CalculatorFactory
-
 from dict2obj import Dict2Obj
+
+from rostopicmonitor.sizecalculator import AbstractCalculator, CalculatorFactory
 
 
 ## =====================================================
@@ -18,9 +18,8 @@ def generate_type(subtype_name_list):
     list_size = len(subtype_name_list)
     fields_list = []
     for i in range(0, list_size):
-        fields_list.append( f"f{i}" )
-    data = {"_slot_types": subtype_name_list,
-            "__slots__": fields_list }
+        fields_list.append(f"f{i}")
+    data = {"_slot_types": subtype_name_list, "__slots__": fields_list}
     return Dict2Obj(data)
 
 
@@ -37,6 +36,4 @@ class LocalCalculatorFactory(CalculatorFactory):
         return TYPE_SIZES.get(type_name)
 
 
-TYPE_SIZES = {
-    "int32": 4
-}
+TYPE_SIZES = {"int32": 4}

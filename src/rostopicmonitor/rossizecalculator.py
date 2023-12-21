@@ -6,8 +6,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import os
-
 import roslib
 
 from rostopicmonitor.sizecalculator import AbstractCalculator, CalculatorFactory
@@ -34,7 +32,6 @@ BUILTIN_TYPE_SIZE = {
     "bool": 1,
     "byte": 1,
     "char": 1,
-
     "int8": 1,
     "uint8": 1,
     "int16": 2,
@@ -43,10 +40,8 @@ BUILTIN_TYPE_SIZE = {
     "uint32": 4,
     "int64": 8,
     "uint64": 8,
-
     "float32": 4,
     "float64": 8,
-
     "time": 8,
-    "duration": 8
+    "duration": 8,
 }

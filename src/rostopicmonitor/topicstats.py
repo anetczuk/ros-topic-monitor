@@ -6,7 +6,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import os
 import logging
 import datetime
 from abc import ABC, abstractmethod
@@ -21,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TopicStats(ABC):
-
     def __init__(self, topic_name, topic_type):
         self.topic_name = topic_name
         self.message_class = topic_type
@@ -47,18 +45,19 @@ class TopicStats(ABC):
         duration = self.stop_time - self.start_time
         duration_secs = duration.total_seconds()
         stats_dict = {
-            "count": self.msg_count, 
+            "count": self.msg_count,
             "size": self.msg_size,
             "duration": duration,
             "freq": float(self.msg_count) / duration_secs,
-            "bw": float(self.msg_size) / duration_secs
+            "bw": float(self.msg_size) / duration_secs,
         }
         return stats_dict
 
     def printInfo(self):
         duration = self.stop_time - self.start_time
-        _LOGGER.info(f"topic {self.topic_name} msg_count: {self.msg_count} msg_size: {self.msg_size}"
-                     f" duration: {duration}")
+        _LOGGER.info(
+            "topic %s msg_count: %s msg_size: %s duration: %s", self.topic_name, self.msg_count, self.msg_size, duration
+        )
 
     def _updateState(self, data):
         self.msg_count += 1
@@ -67,9 +66,9 @@ class TopicStats(ABC):
     @abstractmethod
     def _generateCalculator(self) -> AbstractCalculator:
         """Return 'True' if calculator represents fixed-sized data, otherwise 'False'."""
-        raise NotImplementedError('You need to define this method in derived class!')
+        raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
     def _startMonitor(self):
         """Subscribe to topic."""
-        raise NotImplementedError('You need to define this method in derived class!')
+        raise NotImplementedError("You need to define this method in derived class!")

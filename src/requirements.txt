@@ -1,1 +1,1 @@
-dict2obj
+dict2obj>=1.2.0

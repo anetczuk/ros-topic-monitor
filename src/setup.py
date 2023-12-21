@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+from typing import Dict, Any
 
 from setuptools import setup, find_packages
 
@@ -24,7 +25,7 @@ def read_list(file_path):
 packages_list = find_packages(include=["rostopicmonitor", "rostopicmonitor.*"])
 
 ## additional data to install
-packages_data = {}
+packages_data: Dict[str, Any] = {}
 # packages_data = {"rostopicmonitor": ["systray/*.png"]}
 
 ## additional scripts to install

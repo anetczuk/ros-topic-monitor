@@ -55,15 +55,11 @@ class TopicStatsTest(unittest.TestCase):
 
 
 class TopicStatsMock(TopicStats):
-    
-    def __init__(self, topic_name, topic_type):
-        super().__init__(topic_name, topic_type)
-
     def update(self, data):
         self._updateState(data)
 
     def _generateCalculator(self) -> AbstractCalculator:
-        return generate_calculator_mock( self.message_class )
+        return generate_calculator_mock(self.message_class)
 
     def _startMonitor(self):
         # do nothing
