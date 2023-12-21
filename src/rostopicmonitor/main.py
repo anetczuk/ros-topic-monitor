@@ -8,6 +8,7 @@
 #
 
 import sys
+import os
 import logging
 import argparse
 
@@ -15,6 +16,7 @@ import rostopic
 import rospy
 
 from rostopicmonitor.rostopicstats import ROSTopicStats
+from rostopicmonitor import utils
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -46,6 +48,31 @@ def start_process(args):
 
     for stats in stats_dict.values():
         stats.printInfo()
+
+    out_file = args.outfile
+    out_dir = args.outdir
+    if not out_file and not out_dir:
+        # nothing to store
+        return
+
+    data_dict = {}
+    for topic, stats in stats_dict.items():
+        stats_dict = stats.getStats()
+        topic_dict = {"topic": topic}
+        topic_dict.update(stats_dict)
+        data_dict[topic] = topic_dict
+    data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
+
+    if out_file:
+        _LOGGER.info("writing output to file: %s", out_file)
+        dir_path = os.path.dirname(os.path.realpath(out_file))
+        os.makedirs(dir_path, exist_ok=True)
+        utils.write_data_file(out_file, data_dict)
+
+    if out_dir:
+        _LOGGER.info("writing output to directory: %s", out_dir)
+        os.makedirs(out_dir, exist_ok=True)
+        utils.write_data_dir(out_dir, data_dict)
 
 
 def subscribe_to(topic_list):
@@ -101,12 +128,26 @@ def get_all_publishers():
 def main():
     parser = argparse.ArgumentParser(description="ROS parse tools")
     parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
-    # parser.add_argument( '--outdir', action='store', required=True, default="",
-    #                      help="Path to output dir" )
+    parser.add_argument(
+        "--outfile",
+        action="store",
+        required=False,
+        default="",
+        help="Path to output file (store collected data in single file).",
+    )
+    parser.add_argument(
+        "--outdir",
+        action="store",
+        required=False,
+        default="",
+        help="Path to output dir (store collected data in directory).",
+    )
 
     args = parser.parse_args()
 
     start_process(args)
+
+    return 0
 
 
 if __name__ == "__main__":

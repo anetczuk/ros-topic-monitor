@@ -47,7 +47,7 @@ class TopicStats(ABC):
         stats_dict = {
             "count": self.msg_count,
             "size": self.msg_size,
-            "duration": duration,
+            "duration": duration_secs,
             "freq": float(self.msg_count) / duration_secs,
             "bw": float(self.msg_size) / duration_secs,
         }
