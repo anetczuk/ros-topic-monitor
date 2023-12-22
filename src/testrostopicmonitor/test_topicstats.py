@@ -12,7 +12,7 @@ import logging
 import time
 
 from rostopicmonitor.sizecalculator import AbstractCalculator
-from rostopicmonitor.topicstats import TopicStats, TopicListener
+from rostopicmonitor.topicstats import TopicStats, TopicListener, RingValueBuffer, ListValueBuffer
 
 from testrostopicmonitor.localsizecalculator import generate_calculator as generate_calculator_mock, generate_type
 
@@ -32,39 +32,131 @@ class TopicStatsTest(unittest.TestCase):
         ## Called after testfunction was executed
         pass
 
-    def test_update(self):
+    def test_update_infinite(self):
         topic_stats = TopicStats()
         topic_stats.start()
 
         time.sleep(0.2)
-        topic_stats.update(4)
+        topic_stats.update(6)
+        topic_stats.update(10)
+        topic_stats.update(20)
         time.sleep(0.2)
 
         topic_stats.stop()
         stats = topic_stats.getStats()
 
-        self.assertEqual(stats["total_count"], 1)
-        self.assertEqual(stats["total_size"], 4)
-        self.assertLess(0, stats["total_freq"])
-        self.assertLess(0, stats["total_bw"])
+        self.assertEqual(len(stats), 9)
+        self.assertEqual(stats["total_count"], 3)
+        self.assertEqual(stats["total_size"], 36)
+        self.assertGreater(stats["total_duration"], 0.4)  # duration will always be a bit greater than 0.4
+        self.assertLess(stats["total_freq"], 7.5)
+        self.assertLess(stats["total_bw"], 90)
+        self.assertEqual(stats["min"], 6)
+        self.assertEqual(stats["max"], 20)
+        self.assertEqual(stats["mean"], 12)
+        self.assertEqual(stats["stddev"], 5.887840577551898)
 
     def test_update_windowed(self):
         topic_stats = TopicStats()
         topic_stats.start(window_size=2)
 
         time.sleep(0.2)
-        topic_stats.update(4)
-        topic_stats.update(4)
-        topic_stats.update(4)
+        topic_stats.update(6)
+        topic_stats.update(10)
+        topic_stats.update(20)
         time.sleep(0.2)
 
         topic_stats.stop()
         stats = topic_stats.getStats()
 
+        self.assertEqual(len(stats), 9)
         self.assertEqual(stats["total_count"], 3)
-        self.assertEqual(stats["total_size"], 12)
-        self.assertLess(0, stats["total_freq"])
-        self.assertLess(0, stats["total_bw"])
+        self.assertEqual(stats["total_size"], 36)
+        self.assertGreater(stats["total_duration"], 0.4)  # duration will always be a bit greater than 0.4
+        self.assertLess(stats["total_freq"], 7.5)
+        self.assertLess(stats["total_bw"], 90)
+        self.assertEqual(stats["min"], 10)
+        self.assertEqual(stats["max"], 20)
+        self.assertEqual(stats["mean"], 15)
+        self.assertEqual(stats["stddev"], 5.0)
+
+
+## ===================================================
+
+
+class ValueBufferTest(unittest.TestCase):
+    def setUp(self):
+        ## Called before testfunction is executed
+        pass
+
+    def tearDown(self):
+        ## Called after testfunction was executed
+        pass
+
+    def test_add_empty(self):
+        buffer = ListValueBuffer()
+        self.assertEqual(len(buffer), 0)
+        self.assertEqual(buffer.min(), 0)
+        self.assertEqual(buffer.max(), 0)
+        self.assertEqual(buffer.sum(), 0)
+        self.assertEqual(buffer.mean(), 0)
+        self.assertEqual(buffer.stddev(), 0)
+
+    def test_add_infinite(self):
+        buffer = ListValueBuffer()
+        buffer.add(6)
+        buffer.add(10)
+        buffer.add(20)
+        self.assertEqual(len(buffer), 3)
+        self.assertEqual(buffer.min(), 6)
+        self.assertEqual(buffer.max(), 20)
+        self.assertEqual(buffer.sum(), 36)
+        self.assertEqual(buffer.mean(), 12)
+        self.assertEqual(buffer.stddev(), 5.887840577551898)
+
+
+class RingValueBufferTest(unittest.TestCase):
+    def setUp(self):
+        ## Called before testfunction is executed
+        pass
+
+    def tearDown(self):
+        ## Called after testfunction was executed
+        pass
+
+    def test_add_empty(self):
+        buffer = RingValueBuffer()
+        self.assertEqual(len(buffer), 0)
+        self.assertEqual(buffer.min(), 0)
+        self.assertEqual(buffer.max(), 0)
+        self.assertEqual(buffer.sum(), 0)
+        self.assertEqual(buffer.mean(), 0)
+        self.assertEqual(buffer.stddev(), 0)
+
+    def test_add_limited(self):
+        buffer = RingValueBuffer(2)
+        buffer.add(5)  # will be ignored
+        buffer.add(10)
+        buffer.add(20)
+        self.assertEqual(len(buffer), 2)
+        self.assertEqual(buffer.min(), 10)
+        self.assertEqual(buffer.max(), 20)
+        self.assertEqual(buffer.sum(), 30)
+        self.assertEqual(buffer.mean(), 15)
+        self.assertEqual(buffer.stddev(), 5.0)
+
+    def test_add_limited_02(self):
+        buffer = RingValueBuffer(3)
+        buffer.add(2)  # will be ignored
+        buffer.add(6)
+        buffer.add(10)
+        buffer.add(20)
+        self.assertEqual(len(buffer), 3)
+        self.assertEqual(buffer.min(), 6)
+        self.assertEqual(buffer.max(), 20)
+        self.assertEqual(buffer.sum(), 36)
+        self.assertEqual(buffer.mean(), 12)
+        self.assertEqual(buffer.stddev(), 5.887840577551898)
 
 
 ## ===================================================

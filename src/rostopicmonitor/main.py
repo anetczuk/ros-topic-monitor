@@ -39,7 +39,8 @@ def start_process(args):
     # ['/rosout', '/rosout_agg', '/turtle1/cmd_vel', '/turtle1/color_sensor', '/turtle1/pose']
     _LOGGER.info("subscribing to topics: %s", topics_list)
 
-    stats_dict = subscribe_to(topics_list)
+    window_size = args.window
+    stats_dict = subscribe_to(topics_list, window_size=window_size)
 
     mon_duration = args.duration
     if mon_duration < 1:
@@ -82,11 +83,11 @@ def start_process(args):
         utils.write_data_dir(out_dir, data_dict)
 
 
-def subscribe_to(topic_list):
+def subscribe_to(topic_list, window_size=None):
     stats_dict = {}
     for topic in topic_list:
         topic_stats = ROSTopicListener(topic)
-        topic_stats.start()
+        topic_stats.start(window_size=window_size)
         stats_dict[topic] = topic_stats
     return stats_dict
 
@@ -142,6 +143,14 @@ def int_positive(value):
 def main():
     parser = argparse.ArgumentParser(description="ROS parse tools")
     parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
+    parser.add_argument(
+        "-w",
+        "--window",
+        action="store",
+        type=int_positive,
+        default=0,
+        help="Set window size, otherwise collect all samples.",
+    )
     parser.add_argument(
         "--duration",
         action="store",
