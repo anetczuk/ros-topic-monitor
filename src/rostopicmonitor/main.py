@@ -15,7 +15,7 @@ import argparse
 import rostopic
 import rospy
 
-from rostopicmonitor.rostopicstats import ROSTopicStats
+from rostopicmonitor.rostopicstats import ROSTopicListener
 from rostopicmonitor import utils
 
 
@@ -85,7 +85,7 @@ def start_process(args):
 def subscribe_to(topic_list):
     stats_dict = {}
     for topic in topic_list:
-        topic_stats = ROSTopicStats(topic)
+        topic_stats = ROSTopicListener(topic)
         topic_stats.start()
         stats_dict[topic] = topic_stats
     return stats_dict
@@ -146,6 +146,7 @@ def main():
         "--duration",
         action="store",
         type=int_positive,
+        default=0,
         help="Set monitor time in seconds. Stop application after timeout.",
     )
     parser.add_argument(
@@ -164,9 +165,7 @@ def main():
     )
 
     args = parser.parse_args()
-
     start_process(args)
-
     return 0
 
 

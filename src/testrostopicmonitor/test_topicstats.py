@@ -12,7 +12,7 @@ import logging
 import time
 
 from rostopicmonitor.sizecalculator import AbstractCalculator
-from rostopicmonitor.topicstats import TopicStats
+from rostopicmonitor.topicstats import TopicStats, TopicListener
 
 from testrostopicmonitor.localsizecalculator import generate_calculator as generate_calculator_mock, generate_type
 
@@ -33,9 +33,56 @@ class TopicStatsTest(unittest.TestCase):
         pass
 
     def test_update(self):
+        topic_stats = TopicStats()
+        topic_stats.start()
+
+        time.sleep(0.2)
+        topic_stats.update(4)
+        time.sleep(0.2)
+
+        topic_stats.stop()
+        stats = topic_stats.getStats()
+
+        self.assertEqual(stats["total_count"], 1)
+        self.assertEqual(stats["total_size"], 4)
+        self.assertLess(0, stats["total_freq"])
+        self.assertLess(0, stats["total_bw"])
+
+    def test_update_windowed(self):
+        topic_stats = TopicStats()
+        topic_stats.start(window_size=2)
+
+        time.sleep(0.2)
+        topic_stats.update(4)
+        topic_stats.update(4)
+        topic_stats.update(4)
+        time.sleep(0.2)
+
+        topic_stats.stop()
+        stats = topic_stats.getStats()
+
+        self.assertEqual(stats["total_count"], 3)
+        self.assertEqual(stats["total_size"], 12)
+        self.assertLess(0, stats["total_freq"])
+        self.assertLess(0, stats["total_bw"])
+
+
+## ===================================================
+
+
+class TopicListenerTest(unittest.TestCase):
+    def setUp(self):
+        ## Called before testfunction is executed
+        pass
+
+    def tearDown(self):
+        ## Called after testfunction was executed
+        pass
+
+    def test_update(self):
         MessageClass = generate_type(["int32"])
 
-        topic_mon = TopicStatsMock("/test_topic", MessageClass)
+        topic_mon = TopicListenerMock("/test_topic", MessageClass)
         topic_mon.start()
 
         time.sleep(0.2)
@@ -45,16 +92,13 @@ class TopicStatsTest(unittest.TestCase):
         topic_mon.stop()
         stats = topic_mon.getStats()
 
-        self.assertEqual(1, stats["count"])
-        self.assertEqual(4, stats["size"])
-        self.assertLess(0, stats["freq"])
-        self.assertLess(0, stats["bw"])
+        self.assertEqual(1, stats["total_count"])
+        self.assertEqual(4, stats["total_size"])
+        self.assertLess(0, stats["total_freq"])
+        self.assertLess(0, stats["total_bw"])
 
 
-## ============================================================
-
-
-class TopicStatsMock(TopicStats):
+class TopicListenerMock(TopicListener):
     def update(self, data):
         self._updateState(data)
 

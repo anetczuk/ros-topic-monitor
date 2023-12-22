@@ -11,7 +11,7 @@ import logging
 import rospy
 import rostopic
 
-from rostopicmonitor.topicstats import TopicStats
+from rostopicmonitor.topicstats import TopicListener
 from rostopicmonitor.sizecalculator import AbstractCalculator
 from rostopicmonitor.rossizecalculator import generate_calculator
 
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 ## =====================================================
 
 
-class ROSTopicStats(TopicStats):
+class ROSTopicListener(TopicListener):
     def __init__(self, topic_name):
         topic_data = rostopic.get_topic_class(topic_name)
         topic_type = topic_data[0]
