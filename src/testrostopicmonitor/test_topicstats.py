@@ -48,7 +48,7 @@ class TopicStatsTest(unittest.TestCase):
         self.assertEqual(len(stats), 9)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
-        self.assertGreater(stats["total_duration"], 0.4)  # duration will always be a bit greater than 0.4
+        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         self.assertEqual(stats["min"], 6)
@@ -72,7 +72,7 @@ class TopicStatsTest(unittest.TestCase):
         self.assertEqual(len(stats), 9)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
-        self.assertGreater(stats["total_duration"], 0.4)  # duration will always be a bit greater than 0.4
+        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         self.assertEqual(stats["min"], 10)

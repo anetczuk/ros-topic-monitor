@@ -56,7 +56,7 @@ class TopicListener(ABC):
             self.topic_name,
             stats_dict["total_count"],
             stats_dict["total_size"],
-            stats_dict["total_duration"],
+            stats_dict["total_time"],
         )
 
     def _updateState(self, data):
@@ -106,7 +106,7 @@ class TopicStats:
             # total stats
             "total_count": self.total_count,
             "total_size": self.total_size,
-            "total_duration": duration_secs,
+            "total_time": duration_secs,
             "total_freq": float(self.total_count) / duration_secs,
             "total_bw": float(self.total_size) / duration_secs,
             # window stats

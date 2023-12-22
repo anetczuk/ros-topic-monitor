@@ -51,11 +51,11 @@ def start_process(args):
         rospy.sleep(mon_duration)
         rospy.signal_shutdown("timeout")
 
-    for stats in stats_dict.values():
-        stats.stop()
+    for listener in stats_dict.values():
+        listener.stop()
 
-    for stats in stats_dict.values():
-        stats.printInfo()
+    for listener in stats_dict.values():
+        listener.printInfo()
 
     out_file = args.outfile
     out_dir = args.outdir
@@ -64,11 +64,11 @@ def start_process(args):
         return
 
     data_dict = {}
-    for topic, stats in stats_dict.items():
-        stats_dict = stats.getStats()
-        topic_dict = {"topic": topic}
-        topic_dict.update(stats_dict)
-        data_dict[topic] = topic_dict
+    for topic, listener in stats_dict.items():
+        stats_data = listener.getStats()
+        topic_data = {"topic": topic}
+        topic_data.update(stats_data)
+        data_dict[topic] = topic_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
 
     if out_file:
