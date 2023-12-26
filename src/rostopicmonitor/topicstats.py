@@ -11,82 +11,26 @@ from abc import ABC, abstractmethod
 import datetime
 import math
 
-from rostopicmonitor.sizecalculator import AbstractCalculator
-
 
 _LOGGER = logging.getLogger(__name__)
 
 
-## =====================================================
+# ==================================================================
 
 
-class TopicListener(ABC):
-    def __init__(self, topic_name, topic_type):
-        self.topic_name = topic_name
-        self.message_class = topic_type
-        self.message_calc: AbstractCalculator = self._generateCalculator()
-
-        self.stats = TopicStats()
-
-    def start(self, window_size=None):
-        self.stats = TopicStats()
-        self.stats.start(window_size=window_size)
-        self._startMonitor()
-
-    def stop(self):
-        self.stats.stop()
-
-    @abstractmethod
-    def _generateCalculator(self) -> AbstractCalculator:
-        """Return 'True' if calculator represents fixed-sized data, otherwise 'False'."""
-        raise NotImplementedError("You need to define this method in derived class!")
-
-    @abstractmethod
-    def _startMonitor(self):
-        """Subscribe to topic."""
-        raise NotImplementedError("You need to define this method in derived class!")
-
-    def getStats(self):
-        return self.stats.getStats()
-
-    def printInfo(self):
-        stats_dict = self.stats.getStats()
-        _LOGGER.info(
-            "topic %s total_count: %s total_size: %s duration: %s",
-            self.topic_name,
-            stats_dict["total_count"],
-            stats_dict["total_size"],
-            stats_dict["total_time"],
-        )
-
-    def _updateState(self, data):
-        if self.stats.isStopped():
-            # stop requested - do not consider more data
-            return
-        msg_size = self.message_calc.calculate(data)
-        self.stats.update(msg_size)
-
-
-class TopicStats:
+class BaseTopicStats(ABC):
     def __init__(self):
-        self.total_count = 0
-        self.total_size = 0
         self.start_time = None
         self.stop_time = None
-        self.window_buffer: ValueBuffer = ListValueBuffer()
 
-    def start(self, window_size=None):
-        w_size = 0    # non-positive value means consider all
-        if window_size and window_size > 0:
-            w_size = window_size
-        self.total_count = 0
-        self.total_size = 0
+    def getDuration(self):
+        duration = self.stop_time - self.start_time
+        return duration.total_seconds()
+
+    def start(self):
         self.start_time = datetime.datetime.now()
         self.stop_time = None
-        if w_size < 1:
-            self.window_buffer = ListValueBuffer()
-        else:
-            self.window_buffer = RingValueBuffer(w_size)
+        self._start()
 
     def stop(self):
         self.stop_time = datetime.datetime.now()
@@ -94,14 +38,55 @@ class TopicStats:
     def isStopped(self):
         return self.stop_time is not None
 
+    def _start(self):
+        # implement if needed
+        pass
+
+    @abstractmethod
     def update(self, data_size):
-        self.total_count += 1
-        self.total_size += data_size
-        self.window_buffer.add(data_size)
+        raise NotImplementedError("You need to define this method in derived class!")
+
+    @abstractmethod
+    def getStats(self):
+        raise NotImplementedError("You need to define this method in derived class!")
+
+
+class RawTopicStats(BaseTopicStats):
+    def __init__(self):
+        super().__init__()
+        self.samples = []
+
+    def _start(self):
+        self.samples = []
+
+    def update(self, data_size):
+        duration = datetime.datetime.now() - self.start_time
+        duration_secs = duration.total_seconds()
+        self.samples.append((duration_secs, data_size))
 
     def getStats(self):
-        duration = self.stop_time - self.start_time
-        duration_secs = duration.total_seconds()
+        return {"data": self.samples}
+
+
+class WindowTopicStats(RawTopicStats):
+    def __init__(self, window_size=0):
+        super().__init__()
+        self.total_count = 0
+        self.total_size = 0
+        self.window_size = window_size
+
+    def _start(self):
+        super()._start()
+        self.total_count = 0
+        self.total_size = 0
+
+    def update(self, data_size):
+        super().update(data_size)
+        self.total_count += 1
+        self.total_size += data_size
+
+    def getStats(self):
+        duration_secs = self.getDuration()
         stats_dict = {
             # total stats
             "total_count": self.total_count,
@@ -109,19 +94,30 @@ class TopicStats:
             "total_time": duration_secs,
             "total_freq": float(self.total_count) / duration_secs,
             "total_bw": float(self.total_size) / duration_secs,
-            # window stats
-            "min": self.window_buffer.min(),
-            "max": self.window_buffer.max(),
-            "mean": self.window_buffer.mean(),
-            "stddev": self.window_buffer.stddev(),
         }
+        stats_list = []
+        buffer = self._getBuffer()
+        for data in self.samples:
+            buffer.add(data[1])
+            buff_data = buffer.getData()
+            stats_list.append((data[0], buff_data))
+        stats_dict["data"] = stats_list
         return stats_dict
+
+    def _getBuffer(self):
+        if self.window_size < 1:
+            return ListValueBuffer()
+        return RingValueBuffer(self.window_size)
 
 
 # ==================================================================
 
 
 class ValueBuffer(ABC):
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError("You need to define this method in derived class!")
+
     @abstractmethod
     def min(self):
         raise NotImplementedError("You need to define this method in derived class!")
@@ -146,6 +142,10 @@ class ValueBuffer(ABC):
     def add(self, new_value):
         raise NotImplementedError("You need to define this method in derived class!")
 
+    def getData(self):
+        stats_dict = {"min": self.min(), "max": self.max(), "mean": self.mean(), "stddev": self.stddev()}
+        return stats_dict
+
 
 class ListValueBuffer(ValueBuffer):
     def __init__(self):
@@ -154,6 +154,10 @@ class ListValueBuffer(ValueBuffer):
 
     def __len__(self):
         return len(self.values)
+
+    def reset(self):
+        self.values = []
+        self.buffer_sum = 0
 
     def min(self):
         if len(self.values) < 1:
@@ -200,6 +204,11 @@ class RingValueBuffer(ValueBuffer):
 
     def __len__(self):
         return self.buffer_size
+
+    def reset(self):
+        self.values = [0] * self.buffer_size
+        self.next_index = 0
+        self.buffer_sum = 0
 
     def min(self):
         if self.buffer_size < 1:

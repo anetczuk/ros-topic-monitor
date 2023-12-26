@@ -11,10 +11,7 @@ import unittest
 import logging
 import time
 
-from rostopicmonitor.sizecalculator import AbstractCalculator
-from rostopicmonitor.topicstats import TopicStats, TopicListener, RingValueBuffer, ListValueBuffer
-
-from testrostopicmonitor.localsizecalculator import generate_calculator as generate_calculator_mock, generate_type
+from rostopicmonitor.topicstats import WindowTopicStats, RingValueBuffer, ListValueBuffer, RawTopicStats
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 ## =====================================================
 
 
-class TopicStatsTest(unittest.TestCase):
+class RawTopicStatsTest(unittest.TestCase):
     def setUp(self):
         ## Called before testfunction is executed
         pass
@@ -32,8 +29,8 @@ class TopicStatsTest(unittest.TestCase):
         ## Called after testfunction was executed
         pass
 
-    def test_update_infinite(self):
-        topic_stats = TopicStats()
+    def test_update(self):
+        topic_stats = RawTopicStats()
         topic_stats.start()
 
         time.sleep(0.2)
@@ -45,20 +42,31 @@ class TopicStatsTest(unittest.TestCase):
         topic_stats.stop()
         stats = topic_stats.getStats()
 
-        self.assertEqual(len(stats), 9)
-        self.assertEqual(stats["total_count"], 3)
-        self.assertEqual(stats["total_size"], 36)
-        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
-        self.assertLess(stats["total_freq"], 7.5)
-        self.assertLess(stats["total_bw"], 90)
-        self.assertEqual(stats["min"], 6)
-        self.assertEqual(stats["max"], 20)
-        self.assertEqual(stats["mean"], 12)
-        self.assertEqual(stats["stddev"], 5.887840577551898)
+        self.assertEqual(len(stats), 1)
+        self.assertIn("data", stats)
+        samples = stats["data"]
+        self.assertEqual(len(samples), 3)
+        self.assertGreater(samples[0][0], 0.2)
+        self.assertEqual(samples[0][1], 6)
+        self.assertEqual(samples[1][1], 10)
+        self.assertEqual(samples[2][1], 20)
 
-    def test_update_windowed(self):
-        topic_stats = TopicStats()
-        topic_stats.start(window_size=2)
+
+## =====================================================
+
+
+class WindowTopicStatsTest(unittest.TestCase):
+    def setUp(self):
+        ## Called before testfunction is executed
+        pass
+
+    def tearDown(self):
+        ## Called after testfunction was executed
+        pass
+
+    def test_update_infinite(self):
+        topic_stats = WindowTopicStats()
+        topic_stats.start()
 
         time.sleep(0.2)
         topic_stats.update(6)
@@ -69,16 +77,44 @@ class TopicStatsTest(unittest.TestCase):
         topic_stats.stop()
         stats = topic_stats.getStats()
 
-        self.assertEqual(len(stats), 9)
+        self.assertEqual(len(stats), 6)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
         self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
-        self.assertEqual(stats["min"], 10)
-        self.assertEqual(stats["max"], 20)
-        self.assertEqual(stats["mean"], 15)
-        self.assertEqual(stats["stddev"], 5.0)
+        samples = stats["data"]
+        self.assertEqual(len(samples), 3)
+        self.assertGreater(samples[0][0], 0.2)
+        self.assertEqual(samples[0][1], {"max": 6, "mean": 6.0, "min": 6, "stddev": 0.0})
+        self.assertEqual(samples[1][1], {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
+        self.assertEqual(samples[2][1], {"max": 20, "mean": 12.0, "min": 6, "stddev": 5.887840577551898})
+
+    def test_update_windowed(self):
+        topic_stats = WindowTopicStats(window_size=2)
+        topic_stats.start()
+
+        time.sleep(0.2)
+        topic_stats.update(6)
+        topic_stats.update(10)
+        topic_stats.update(20)
+        time.sleep(0.2)
+
+        topic_stats.stop()
+        stats = topic_stats.getStats()
+
+        self.assertEqual(len(stats), 6)
+        self.assertEqual(stats["total_count"], 3)
+        self.assertEqual(stats["total_size"], 36)
+        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
+        self.assertLess(stats["total_freq"], 7.5)
+        self.assertLess(stats["total_bw"], 90)
+        samples = stats["data"]
+        self.assertEqual(len(samples), 3)
+        self.assertGreater(samples[0][0], 0.2)
+        self.assertEqual(samples[0][1], {"max": 6, "mean": 3.0, "min": 0, "stddev": 3.0})
+        self.assertEqual(samples[1][1], {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
+        self.assertEqual(samples[2][1], {"max": 20, "mean": 15.0, "min": 10, "stddev": 5.0})
 
 
 ## ===================================================
@@ -157,46 +193,3 @@ class RingValueBufferTest(unittest.TestCase):
         self.assertEqual(buffer.sum(), 36)
         self.assertEqual(buffer.mean(), 12)
         self.assertEqual(buffer.stddev(), 5.887840577551898)
-
-
-## ===================================================
-
-
-class TopicListenerTest(unittest.TestCase):
-    def setUp(self):
-        ## Called before testfunction is executed
-        pass
-
-    def tearDown(self):
-        ## Called after testfunction was executed
-        pass
-
-    def test_update(self):
-        MessageClass = generate_type(["int32"])
-
-        topic_mon = TopicListenerMock("/test_topic", MessageClass)
-        topic_mon.start()
-
-        time.sleep(0.2)
-        topic_mon.update(None)
-        time.sleep(0.2)
-
-        topic_mon.stop()
-        stats = topic_mon.getStats()
-
-        self.assertEqual(1, stats["total_count"])
-        self.assertEqual(4, stats["total_size"])
-        self.assertLess(0, stats["total_freq"])
-        self.assertLess(0, stats["total_bw"])
-
-
-class TopicListenerMock(TopicListener):
-    def update(self, data):
-        self._updateState(data)
-
-    def _generateCalculator(self) -> AbstractCalculator:
-        return generate_calculator_mock(self.message_class)
-
-    def _startMonitor(self):
-        # do nothing
-        pass

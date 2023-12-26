@@ -11,7 +11,7 @@ import logging
 import rospy
 import rostopic
 
-from rostopicmonitor.topicstats import TopicListener
+from rostopicmonitor.topiclistener import TopicListener
 from rostopicmonitor.sizecalculator import AbstractCalculator
 from rostopicmonitor.rossizecalculator import generate_calculator
 
