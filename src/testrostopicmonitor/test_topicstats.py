@@ -45,11 +45,11 @@ class RawTopicStatsTest(unittest.TestCase):
         self.assertEqual(len(stats), 1)
         self.assertIn("data", stats)
         samples = stats["data"]
-        self.assertEqual(len(samples), 3)
-        self.assertGreater(samples[0][0], 0.2)
-        self.assertEqual(samples[0][1], 6)
-        self.assertEqual(samples[1][1], 10)
-        self.assertEqual(samples[2][1], 20)
+        self.assertEqual(len(samples), 2)
+        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertEqual(get_dict_from_samples(samples, 0), {"size": 6})
+        self.assertEqual(get_dict_from_samples(samples, 1), {"size": 10})
+        self.assertEqual(get_dict_from_samples(samples, 2), {"size": 20})
 
 
 ## =====================================================
@@ -84,11 +84,13 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         samples = stats["data"]
-        self.assertEqual(len(samples), 3)
-        self.assertGreater(samples[0][0], 0.2)
-        self.assertEqual(samples[0][1], {"max": 6, "mean": 6.0, "min": 6, "stddev": 0.0})
-        self.assertEqual(samples[1][1], {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
-        self.assertEqual(samples[2][1], {"max": 20, "mean": 12.0, "min": 6, "stddev": 5.887840577551898})
+        self.assertEqual(len(samples), 5)
+        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertEqual(get_dict_from_samples(samples, 0), {"max": 6, "mean": 6.0, "min": 6, "stddev": 0.0})
+        self.assertEqual(get_dict_from_samples(samples, 1), {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
+        self.assertEqual(
+            get_dict_from_samples(samples, 2), {"max": 20, "mean": 12.0, "min": 6, "stddev": 5.887840577551898}
+        )
 
     def test_update_windowed(self):
         topic_stats = WindowTopicStats(window_size=2)
@@ -110,11 +112,11 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         samples = stats["data"]
-        self.assertEqual(len(samples), 3)
-        self.assertGreater(samples[0][0], 0.2)
-        self.assertEqual(samples[0][1], {"max": 6, "mean": 3.0, "min": 0, "stddev": 3.0})
-        self.assertEqual(samples[1][1], {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
-        self.assertEqual(samples[2][1], {"max": 20, "mean": 15.0, "min": 10, "stddev": 5.0})
+        self.assertEqual(len(samples), 5)
+        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertEqual(get_dict_from_samples(samples, 0), {"max": 6, "mean": 3.0, "min": 0, "stddev": 3.0})
+        self.assertEqual(get_dict_from_samples(samples, 1), {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
+        self.assertEqual(get_dict_from_samples(samples, 2), {"max": 20, "mean": 15.0, "min": 10, "stddev": 5.0})
 
 
 ## ===================================================
@@ -193,3 +195,11 @@ class RingValueBufferTest(unittest.TestCase):
         self.assertEqual(buffer.sum(), 36)
         self.assertEqual(buffer.mean(), 12)
         self.assertEqual(buffer.stddev(), 5.887840577551898)
+
+
+def get_dict_from_samples(samples_data, row_index):
+    ret_dict = {}
+    for key, val in samples_data.items():
+        ret_dict[key] = val[row_index]
+    del ret_dict["timestamp"]
+    return ret_dict

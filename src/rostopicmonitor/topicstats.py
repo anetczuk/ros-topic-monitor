@@ -65,7 +65,9 @@ class RawTopicStats(BaseTopicStats):
         self.samples.append((duration_secs, data_size))
 
     def getStats(self):
-        return {"data": self.samples}
+        timestamps = [sample[0] for sample in self.samples]
+        sizes = [sample[1] for sample in self.samples]
+        return {"data": {"timestamp": timestamps, "size": sizes}}
 
 
 class WindowTopicStats(RawTopicStats):
@@ -95,16 +97,21 @@ class WindowTopicStats(RawTopicStats):
             "total_freq": float(self.total_count) / duration_secs,
             "total_bw": float(self.total_size) / duration_secs,
         }
-        stats_list = []
-        buffer = self._getBuffer()
+        dict_list = []
+        buffer = self._spawnBuffer()
         for data in self.samples:
             buffer.add(data[1])
+            buff_dict = {"timestamp": data[0]}
             buff_data = buffer.getData()
-            stats_list.append((data[0], buff_data))
+            buff_dict.update(buff_data)
+            dict_list.append(buff_dict)
+        stats_list = {}
+        if dict_list:
+            stats_list = {dict_key: [item_dict[dict_key] for item_dict in dict_list] for dict_key in dict_list[0]}
         stats_dict["data"] = stats_list
         return stats_dict
 
-    def _getBuffer(self):
+    def _spawnBuffer(self):
         if self.window_size < 1:
             return ListValueBuffer()
         return RingValueBuffer(self.window_size)

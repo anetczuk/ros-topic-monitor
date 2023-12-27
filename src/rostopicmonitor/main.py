@@ -16,8 +16,9 @@ import rostopic
 import rospy
 
 from rostopicmonitor.rostopiclistener import ROSTopicListener
-from rostopicmonitor import utils
 from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
+from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
+from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -92,33 +93,45 @@ def execute_listeners(listeners_dict, args):
     for listener in listeners_dict.values():
         listener.stop()
 
-    for listener in listeners_dict.values():
-        listener.printInfo()
 
-
-def store_data(stats_dict, args):
+def store_data(listeners_dict, args):
     out_file = args.outfile
     out_dir = args.outdir
     if not out_file and not out_dir:
         # nothing to store
+        _LOGGER.info("nothing to store (no file or dir passed to store data)")
         return
 
     data_dict = {}
-    for topic, listener in stats_dict.items():
+    for topic, listener in listeners_dict.items():
         stats_data = listener.getStats()
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
 
-    if out_file:
-        _LOGGER.info("writing output to file: %s", out_file)
-        dir_path = os.path.dirname(os.path.realpath(out_file))
-        os.makedirs(dir_path, exist_ok=True)
-        utils.write_data_file(out_file, data_dict)
+    out_format = args.outformat
+    if out_format == "json":
+        if out_file:
+            _LOGGER.info("writing output to file: %s", out_file)
+            dir_path = os.path.dirname(os.path.realpath(out_file))
+            os.makedirs(dir_path, exist_ok=True)
+            write_json_file(out_file, data_dict)
 
-    if out_dir:
-        _LOGGER.info("writing output to directory: %s", out_dir)
-        os.makedirs(out_dir, exist_ok=True)
-        utils.write_data_dir(out_dir, data_dict)
+        if out_dir:
+            _LOGGER.info("writing output to directory: %s", out_dir)
+            os.makedirs(out_dir, exist_ok=True)
+            write_json_dir(out_dir, data_dict)
+    else:
+        if out_file:
+            out_file_path = f"{out_file}.{out_format}"
+            _LOGGER.info("writing output to file: %s", out_file_path)
+            dir_path = os.path.dirname(os.path.realpath(out_file_path))
+            os.makedirs(dir_path, exist_ok=True)
+            write_pandas_file(out_file_path, data_dict, out_format)
+
+        if out_dir:
+            _LOGGER.info("writing output to directory: %s", out_dir)
+            os.makedirs(out_dir, exist_ok=True)
+            write_pandas_dir(out_dir, data_dict, out_format)
 
 
 ## =====================================================
@@ -185,6 +198,14 @@ def add_common_args(parser):
         default="",
         help="Path to output dir (store collected data in directory).",
     )
+    parser.add_argument(
+        "--outformat",
+        action="store",
+        required=False,
+        choices=["json", "csv", "xls", "xlsx"],
+        default="json",
+        help="Output format. Default: %(default)s.",
+    )
 
 
 def int_positive(value):
@@ -202,7 +223,7 @@ def main():
     )
     parser = argparse.ArgumentParser(description=main_description)
     parser.add_argument("--listtools", action="store_true", help="List tools")
-    parser.set_defaults(func=process_stats)
+    parser.set_defaults(func=None)
 
     subparsers = parser.add_subparsers(help="one of tools", description="use one of tools", dest="tool", required=False)
 
@@ -238,6 +259,12 @@ def main():
         tools_list = list(subparsers.choices.keys())
         print(", ".join(tools_list))
         return 0
+
+    if not args.func:
+        ## no command given -- print help message
+        parser.print_help()
+        sys.exit(1)
+        return 1
 
     args.func(args)
     return 0
