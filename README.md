@@ -2,6 +2,24 @@
 
 Basic functionality of the project resembles those of [rostopic](http://wiki.ros.org/rostopic) command-line tool.
 
+Features:
+- listen on multiple topics
+- collect raw data (sizes of messagse)
+- calculate min, max, mean and stddev
+- calculate stats based on all data or in window of given size
+- store output in following formats: json, csv, xls and xlsx
+
+Description of command-line arguments can be found [here](doc/cmdargs.md).
+
+
+## Installation
+
+Installation of package can be done by:
+ - `install-deps.sh` to install package dependencies (`requirements.txt`)
+ - `install-package.sh` to install package in standard way through `pip`
+ - `install-package-dev.sh` to install package in developer mode using `pip`
+ - to install package from downloaded ZIP file execute: `pip3 install --user file:ros-topic-monitor-master.zip#subdirectory=src`
+
 
 ## References
 
