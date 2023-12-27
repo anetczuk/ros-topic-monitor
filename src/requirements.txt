@@ -3,6 +3,6 @@ dict2obj>=1.2.0
 
 rospkg
 
-pandas>=1.1.2, <1.4.0
+pandas>=1.1.2
 xlsxwriter                  # for writing xlsx
 openpyxl                    # for writing xls

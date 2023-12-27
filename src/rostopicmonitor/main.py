@@ -11,6 +11,7 @@ import sys
 import os
 import logging
 import argparse
+import re
 
 import rostopic
 import rospy
@@ -30,7 +31,8 @@ _LOGGER = logging.getLogger(_MAIN_LOGGER_NAME)
 
 
 def process_stats(args):
-    listeners_dict = init_listeners()
+    topic_filter = args.topic
+    listeners_dict = init_listeners(topic_filter)
 
     window_size = args.window
 
@@ -44,7 +46,8 @@ def process_stats(args):
 
 
 def process_raw(args):
-    listeners_dict = init_listeners()
+    topic_filter = args.topic
+    listeners_dict = init_listeners(topic_filter)
 
     # listener: TopicListener
     for listener in listeners_dict.values():
@@ -58,12 +61,14 @@ def process_raw(args):
 # ============================================================
 
 
-def init_listeners():
+def init_listeners(topic_filter):
     try:
         topics_list = get_all_publishers()
     except ConnectionRefusedError:
         _LOGGER.error("master not running")
         return {}
+
+    topics_list = filter_items(topics_list, topic_filter)
 
     # ['/rosout', '/rosout_agg', '/turtle1/cmd_vel', '/turtle1/color_sensor', '/turtle1/pose']
     _LOGGER.info("subscribing to topics: %s", topics_list)
@@ -95,6 +100,9 @@ def execute_listeners(listeners_dict, args):
 
 
 def store_data(listeners_dict, args):
+    if not listeners_dict:
+        return
+
     out_file = args.outfile
     out_dir = args.outdir
     if not out_file and not out_dir:
@@ -132,6 +140,23 @@ def store_data(listeners_dict, args):
             _LOGGER.info("writing output to directory: %s", out_dir)
             os.makedirs(out_dir, exist_ok=True)
             write_pandas_dir(out_dir, data_dict, out_format)
+
+
+def filter_items(items_list, regex_list):
+    if not items_list:
+        return items_list
+    if not regex_list:
+        return items_list
+
+    ret_list = []
+    pattern_list = [re.compile(item) for item in regex_list]
+    for item in items_list:
+        for pattern in pattern_list:
+            if pattern.match(item):
+                ret_list.append(item)
+                continue
+
+    return ret_list
 
 
 ## =====================================================
@@ -177,6 +202,14 @@ def get_all_publishers():
 
 def add_common_args(parser):
     parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
+    parser.add_argument(
+        "--topic",
+        metavar="N",
+        type=str,
+        nargs="+",
+        help="Space separated list of regex strings applied on found topics to listen on. "
+        "Example: '--topic '/turtle1/.*' '/ros.*'",
+    )
     parser.add_argument(
         "--duration",
         action="store",

@@ -4,7 +4,7 @@ Basic functionality of the project resembles those of [rostopic](http://wiki.ros
 
 Features:
 - listen on multiple topics
-- collect raw data (sizes of messagse)
+- collect raw data (sizes of messages)
 - calculate min, max, mean and stddev
 - calculate stats based on all data or in window of given size
 - store output in following formats: json, csv, xls and xlsx
@@ -19,6 +19,7 @@ Installation of package can be done by:
  - `install-package.sh` to install package in standard way through `pip`
  - `install-package-dev.sh` to install package in developer mode using `pip`
  - to install package from downloaded ZIP file execute: `pip3 install --user file:ros-topic-monitor-master.zip#subdirectory=src`
+ - to install package directly from GitHub execute: `pip3 install --user git+https://github.com/anetczuk/ros-topic-monitor.git#subdirectory=src`
 
 
 ## References
