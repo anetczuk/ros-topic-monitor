@@ -18,7 +18,7 @@ except ImportError:
     pass
 
 
-# import sys
+import sys
 import os
 
 import logging
@@ -127,7 +127,7 @@ if __name__ == "__main__":
             suite = get_test_cases(args.run_test)
             testResult = unittest.TextTestRunner(verbosity=verbosity).run(suite)
             if testResult.wasSuccessful() is False:
-                break
+                sys.exit(1)
             print("\n")
     elif testsRepeats > 0:
         for counter in range(1, testsRepeats + 1):
@@ -135,8 +135,10 @@ if __name__ == "__main__":
             suite = get_test_cases(args.run_test)
             testResult = unittest.TextTestRunner(verbosity=verbosity).run(suite)
             if testResult.wasSuccessful() is False:
-                break
+                sys.exit(1)
             print("\n")
     else:
         suite = get_test_cases(args.run_test)
-        unittest.TextTestRunner(verbosity=verbosity).run(suite)
+        testResult = unittest.TextTestRunner(verbosity=verbosity).run(suite)
+        if testResult.wasSuccessful() is False:
+            sys.exit(1)

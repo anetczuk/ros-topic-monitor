@@ -41,6 +41,19 @@ def process_list(args):
         _LOGGER.error("master not running")
 
 
+def process_raw(args):
+    topic_filter = args.topic
+    listeners_dict = init_listeners(topic_filter)
+
+    # listener: TopicListener
+    for listener in listeners_dict.values():
+        collector = RawTopicStats()
+        listener.setStatsCollector(collector)
+
+    execute_listeners(listeners_dict, args)
+    store_data(listeners_dict, args)
+
+
 def process_stats(args):
     topic_filter = args.topic
     listeners_dict = init_listeners(topic_filter)
@@ -50,19 +63,6 @@ def process_stats(args):
     # listener: TopicListener
     for listener in listeners_dict.values():
         collector = WindowTopicStats(window_size)
-        listener.setStatsCollector(collector)
-
-    execute_listeners(listeners_dict, args)
-    store_data(listeners_dict, args)
-
-
-def process_raw(args):
-    topic_filter = args.topic
-    listeners_dict = init_listeners(topic_filter)
-
-    # listener: TopicListener
-    for listener in listeners_dict.values():
-        collector = RawTopicStats()
         listener.setStatsCollector(collector)
 
     execute_listeners(listeners_dict, args)
@@ -289,6 +289,14 @@ def main():
 
     ## =================================================
 
+    description = "collect and store raw data (sizes of messages)"
+    subparser = subparsers.add_parser("raw", help=description)
+    subparser.description = description
+    subparser.set_defaults(func=process_raw)
+    add_common_args(subparser)
+
+    ## =================================================
+
     description = "collect and store stats data"
     subparser = subparsers.add_parser("stats", help=description)
     subparser.description = description
@@ -302,14 +310,6 @@ def main():
         default=0,
         help="Set window size, otherwise collect all samples.",
     )
-
-    ## =================================================
-
-    description = "collect and store raw data (sizes of messages)"
-    subparser = subparsers.add_parser("raw", help=description)
-    subparser.description = description
-    subparser.set_defaults(func=process_raw)
-    add_common_args(subparser)
 
     ## =================================================
 
