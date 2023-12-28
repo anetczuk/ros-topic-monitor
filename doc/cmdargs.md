@@ -1,21 +1,35 @@
 ## <a name="main_help"></a> rostopicmon.py --help
 ```
-usage: rostopicmon.py [-h] [--listtools] {stats,raw} ...
+usage: rostopicmon.py [-h] [--listtools] [-la] {list,stats,raw} ...
 
 ROS topic measurement tools. Collect size of messages passed through topics
 and calculate various statistics. All data is measured in Bytes, Secounds and
 Hertz accordingly.
 
 optional arguments:
-  -h, --help   show this help message and exit
-  --listtools  List tools
+  -h, --help        show this help message and exit
+  --listtools       List tools
+  -la, --logall     Log all messages
 
 subcommands:
   use one of tools
 
-  {stats,raw}  one of tools
-    stats      collect and store stats data
-    raw        collect and store raw data (sizes of messages)
+  {list,stats,raw}  one of tools
+    list            list topics
+    stats           collect and store stats data
+    raw             collect and store raw data (sizes of messages)
+```
+
+
+
+## <a name="list_help"></a> rostopicmon.py list --help
+```
+usage: rostopicmon.py list [-h]
+
+list topics
+
+optional arguments:
+  -h, --help  show this help message and exit
 ```
 
 

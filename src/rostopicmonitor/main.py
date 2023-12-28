@@ -30,6 +30,17 @@ _LOGGER = logging.getLogger(_MAIN_LOGGER_NAME)
 # ============================================================
 
 
+def process_list(args):
+    init_logger(args.logall)
+
+    try:
+        topics_list = get_all_publishers()
+        # _LOGGER.info("found topics:\n%s", topics_list)
+        _LOGGER.info("found topics:\n%s", "\n".join(topics_list))
+    except ConnectionRefusedError:
+        _LOGGER.error("master not running")
+
+
 def process_stats(args):
     topic_filter = args.topic
     listeners_dict = init_listeners(topic_filter)
@@ -162,26 +173,34 @@ def filter_items(items_list, regex_list):
 ## =====================================================
 
 
+_LOGGER_FORMAT = "%(levelname)-8s %(name)-12s: %(message)s"
+
+
 def init_ros_node(logall=False):
     # anonymous=True flag means that rospy will choose a unique name
     rospy.init_node("topic_monitor", anonymous=True)
     rospy.on_shutdown(shutdown_node)
 
+    init_logger(logall)
+
+    # configure logger to receive messages to command line
+    consoleHandler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter(_LOGGER_FORMAT)
+    consoleHandler.setFormatter(formatter)
+
+    main_logger = logging.getLogger(_MAIN_LOGGER_NAME)
+    main_logger.addHandler(consoleHandler)
+
+
+def init_logger(logall=False):
     # configure loggers AFTER 'init_node'
-    logging.basicConfig()
+    logging.basicConfig(format=_LOGGER_FORMAT)
 
     main_logger = logging.getLogger(_MAIN_LOGGER_NAME)
     if logall:
         main_logger.setLevel(logging.DEBUG)
     else:
         main_logger.setLevel(logging.INFO)
-
-    # configure logger to receive messages to command line
-    consoleHandler = logging.StreamHandler(stream=sys.stdout)
-    formatter = logging.Formatter("[%(levelname)-8s] %(name)-12s: %(message)s")
-    consoleHandler.setFormatter(formatter)
-
-    main_logger.addHandler(consoleHandler)
 
 
 def shutdown_node():
@@ -259,6 +278,14 @@ def main():
     parser.set_defaults(func=None)
 
     subparsers = parser.add_subparsers(help="one of tools", description="use one of tools", dest="tool", required=False)
+
+    ## =================================================
+
+    description = "list topics"
+    subparser = subparsers.add_parser("list", help=description)
+    subparser.description = description
+    subparser.set_defaults(func=process_list)
+    parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
 
     ## =================================================
 
