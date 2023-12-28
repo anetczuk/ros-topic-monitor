@@ -46,7 +46,7 @@ class RawTopicStatsTest(unittest.TestCase):
         self.assertIn("data", stats)
         samples = stats["data"]
         self.assertEqual(len(samples), 2)
-        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertGreater(samples["time"][0], 0.2)
         self.assertEqual(get_dict_from_samples(samples, 0), {"size": 6})
         self.assertEqual(get_dict_from_samples(samples, 1), {"size": 10})
         self.assertEqual(get_dict_from_samples(samples, 2), {"size": 20})
@@ -68,7 +68,7 @@ class WindowTopicStatsTest(unittest.TestCase):
         topic_stats = WindowTopicStats()
         topic_stats.start()
 
-        time.sleep(0.2)
+        time.sleep(0.1)
         topic_stats.update(6)
         topic_stats.update(10)
         topic_stats.update(20)
@@ -81,12 +81,12 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertEqual(stats["window"], 0)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
-        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
-        self.assertLess(stats["total_freq"], 7.5)
-        self.assertLess(stats["total_bw"], 90)
+        self.assertGreater(stats["total_time"], 0.1)  # duration will always be a bit greater than 0.1
+        self.assertLess(stats["total_freq"], 30.0)
+        self.assertLess(stats["total_bw"], 360)
         samples = stats["data"]
-        self.assertEqual(len(samples), 6)
-        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertEqual(len(samples), 12)
+        self.assertGreater(samples["time"][0], 0.1)
         self.assertEqual(
             {"size": 6, "size_max": 6, "size_mean": 6.0, "size_min": 6, "size_stddev": 0.0},
             get_dict_from_samples(samples, 0),
@@ -104,7 +104,7 @@ class WindowTopicStatsTest(unittest.TestCase):
         topic_stats = WindowTopicStats(window_size=2)
         topic_stats.start()
 
-        time.sleep(0.2)
+        time.sleep(0.3)
         topic_stats.update(6)
         topic_stats.update(10)
         topic_stats.update(20)
@@ -117,12 +117,12 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertEqual(stats["window"], 2)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
-        self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
-        self.assertLess(stats["total_freq"], 7.5)
-        self.assertLess(stats["total_bw"], 90)
+        self.assertGreater(stats["total_time"], 0.3)  # duration will always be a bit greater than 0.3
+        self.assertLess(stats["total_freq"], 10.0)
+        self.assertLess(stats["total_bw"], 120)
         samples = stats["data"]
-        self.assertEqual(len(samples), 6)
-        self.assertGreater(samples["timestamp"][0], 0.2)
+        self.assertEqual(len(samples), 12)
+        self.assertGreater(samples["time"][0], 0.2)
         self.assertEqual(
             {"size": 6, "size_max": 6, "size_mean": 3.0, "size_min": 0, "size_stddev": 3.0},
             get_dict_from_samples(samples, 0),
@@ -141,5 +141,5 @@ def get_dict_from_samples(samples_data, row_index):
     ret_dict = {}
     for key, val in samples_data.items():
         ret_dict[key] = val[row_index]
-    del ret_dict["timestamp"]
+    del ret_dict["time"]
     return ret_dict

@@ -46,12 +46,14 @@ class ValueBuffer(ABC):
     def add(self, new_value):
         raise NotImplementedError("You need to define this method in derived class!")
 
-    def getData(self):
+    def getData(self, prefix=""):
+        if prefix:
+            prefix += "_"
         stats_dict = {
-            "size_min": self.min(),
-            "size_max": self.max(),
-            "size_mean": self.mean(),
-            "size_stddev": self.stddev(),
+            f"{prefix}min": self.min(),
+            f"{prefix}max": self.max(),
+            f"{prefix}mean": self.mean(),
+            f"{prefix}stddev": self.stddev(),
         }
         return stats_dict
 
@@ -107,14 +109,16 @@ class RingValueBuffer(ValueBuffer):
         self.buffer_size = buffer_size
         if self.buffer_size < 0:
             raise ValueError("invalid size: expected positive value")
+        self.count = 0
         self.values = [0] * self.buffer_size
         self.next_index = 0
         self.buffer_sum = 0
 
     def __len__(self):
-        return self.buffer_size
+        return min(self.buffer_size, self.count)
 
     def reset(self):
+        self.count = 0
         self.values = [0] * self.buffer_size
         self.next_index = 0
         self.buffer_sum = 0
@@ -122,12 +126,14 @@ class RingValueBuffer(ValueBuffer):
     def min(self):
         if self.buffer_size < 1:
             return 0
-        return min(self.values)
+        values = self._currValues()
+        return min(values)
 
     def max(self):
         if self.buffer_size < 1:
             return 0
-        return max(self.values)
+        values = self._currValues()
+        return max(values)
 
     def sum(self):
         return self.buffer_sum
@@ -135,20 +141,29 @@ class RingValueBuffer(ValueBuffer):
     def mean(self):
         if self.buffer_size < 1:
             return 0
-        return self.buffer_sum / self.buffer_size
+        return self.buffer_sum / len(self)
 
     def stddev(self):
         if self.buffer_size < 1:
             return 0
         mean = self.mean()
         pow_dist = 0
-        for val in self.values:
+        values = self._currValues()
+        for val in values:
             pow_dist += math.pow(val - mean, 2)
-        return math.sqrt(pow_dist / self.buffer_size)
+        return math.sqrt(pow_dist / len(self))
 
     def add(self, new_value):
+        self.count += 1
         if self.buffer_size < 1:
             return
         self.buffer_sum -= self.values[self.next_index] - new_value
         self.values[self.next_index] = new_value
         self.next_index = (self.next_index + 1) % self.buffer_size
+
+    def _currValues(self):
+        if self.count < self.buffer_size:
+            size = len(self)
+            return self.values[0:size]
+        else:
+            return self.values

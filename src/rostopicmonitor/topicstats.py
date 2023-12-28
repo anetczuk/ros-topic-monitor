@@ -19,14 +19,34 @@ _LOGGER = logging.getLogger(__name__)
 # ==================================================================
 
 
+# class ElapseTime:
+#
+#     def __init__(self):
+#         self.start_time: datetime.datetime = None
+#         self.stop_time: float = None                # seconds since start
+#
+#     def start(self):
+#         self.start_time = datetime.datetime.now()
+#         self.stop_time = None
+#
+#     def stop(self):
+#         self.stop_time = self._currDuration()
+#
+#     def _currDuration(self):
+#         duration = datetime.datetime.now() - self.start_time
+#         return duration.total_seconds()
+
+
+# ==================================================================
+
+
 class BaseTopicStats(ABC):
     def __init__(self):
-        self.start_time = None
-        self.stop_time = None
+        self.start_time: datetime.datetime = None
+        self.stop_time: float = None                # seconds since start
 
     def getDuration(self):
-        duration = self.stop_time - self.start_time
-        return duration.total_seconds()
+        return self.stop_time
 
     def start(self):
         self.start_time = datetime.datetime.now()
@@ -34,12 +54,17 @@ class BaseTopicStats(ABC):
         self._start()
 
     def stop(self):
-        self.stop_time = datetime.datetime.now()
+        self.stop_time = self._currDuration()
+        self._stop()
 
     def isStopped(self):
         return self.stop_time is not None
 
     def _start(self):
+        # implement if needed
+        pass
+
+    def _stop(self):
         # implement if needed
         pass
 
@@ -51,6 +76,10 @@ class BaseTopicStats(ABC):
     def getStats(self):
         raise NotImplementedError("You need to define this method in derived class!")
 
+    def _currDuration(self):
+        duration = datetime.datetime.now() - self.start_time
+        return duration.total_seconds()
+
 
 class RawTopicStats(BaseTopicStats):
     def __init__(self):
@@ -60,15 +89,21 @@ class RawTopicStats(BaseTopicStats):
     def _start(self):
         self.samples = []
 
+    def _stop(self):
+        if self.samples:
+            # set stop time as time of last message
+            # it makes statistics more accurate, because there is slight time gap
+            # between stop of ROS main loop and stop time of 'self.stop_time'
+            self.stop_time = self.samples[-1][0]
+
     def update(self, data_size):
-        duration = datetime.datetime.now() - self.start_time
-        duration_secs = duration.total_seconds()
-        self.samples.append((duration_secs, data_size))
+        duration = self._currDuration()
+        self.samples.append((duration, data_size))
 
     def getStats(self):
         timestamps = [sample[0] for sample in self.samples]
         sizes = [sample[1] for sample in self.samples]
-        return {"data": {"timestamp": timestamps, "size": sizes}}
+        return {"data": {"time": timestamps, "size": sizes}}
 
 
 class WindowTopicStats(RawTopicStats):
@@ -100,13 +135,36 @@ class WindowTopicStats(RawTopicStats):
             "total_bw": float(self.total_size) / duration_secs,
         }
         dict_list = []
-        buffer: ValueBuffer = self._spawnBuffer()
+        size_buffer: ValueBuffer = self._spawnBuffer()
+        time_buffer: ValueBuffer = self._spawnBuffer()
+
+        prev_time = 0
         for data in self.samples:
-            buff_dict = {"timestamp": data[0], "size": data[1]}
-            buffer.add(data[1])
-            buff_data = buffer.getData()
-            buff_dict.update(buff_data)
-            dict_list.append(buff_dict)
+            sample_dict = {"time": data[0], "size": data[1]}
+
+            time_diff = data[0] - prev_time
+            prev_time = data[0]
+            time_buffer.add(time_diff)
+            time_data = time_buffer.getData("dt")
+            sample_dict.update(time_data)
+            sample_dict.update({"freq": 1.0 / time_buffer.mean()})
+
+            size_buffer.add(data[1])
+            size_data = size_buffer.getData("size")
+            sample_dict.update(size_data)
+
+            time_diff = time_buffer.sum()
+
+            msg_bw = 0.0
+            if time_diff == 0:
+                sample_dict.update({"bw": ""})
+            else:
+                size_sum = size_buffer.sum()
+                msg_bw = size_sum / time_diff
+                sample_dict.update({"bw": msg_bw})
+
+            dict_list.append(sample_dict)
+
         stats_list = {}
         if dict_list:
             stats_list = {dict_key: [item_dict[dict_key] for item_dict in dict_list] for dict_key in dict_list[0]}
