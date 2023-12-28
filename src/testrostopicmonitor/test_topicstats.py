@@ -11,7 +11,7 @@ import unittest
 import logging
 import time
 
-from rostopicmonitor.topicstats import WindowTopicStats, RingValueBuffer, ListValueBuffer, RawTopicStats
+from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,19 +77,27 @@ class WindowTopicStatsTest(unittest.TestCase):
         topic_stats.stop()
         stats = topic_stats.getStats()
 
-        self.assertEqual(len(stats), 6)
+        self.assertEqual(len(stats), 7)
+        self.assertEqual(stats["window"], 0)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
         self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         samples = stats["data"]
-        self.assertEqual(len(samples), 5)
+        self.assertEqual(len(samples), 6)
         self.assertGreater(samples["timestamp"][0], 0.2)
-        self.assertEqual(get_dict_from_samples(samples, 0), {"max": 6, "mean": 6.0, "min": 6, "stddev": 0.0})
-        self.assertEqual(get_dict_from_samples(samples, 1), {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
         self.assertEqual(
-            get_dict_from_samples(samples, 2), {"max": 20, "mean": 12.0, "min": 6, "stddev": 5.887840577551898}
+            {"size": 6, "size_max": 6, "size_mean": 6.0, "size_min": 6, "size_stddev": 0.0},
+            get_dict_from_samples(samples, 0),
+        )
+        self.assertEqual(
+            {"size": 10, "size_max": 10, "size_mean": 8.0, "size_min": 6, "size_stddev": 2.0},
+            get_dict_from_samples(samples, 1),
+        )
+        self.assertEqual(
+            {"size": 20, "size_max": 20, "size_mean": 12.0, "size_min": 6, "size_stddev": 5.887840577551898},
+            get_dict_from_samples(samples, 2),
         )
 
     def test_update_windowed(self):
@@ -105,96 +113,28 @@ class WindowTopicStatsTest(unittest.TestCase):
         topic_stats.stop()
         stats = topic_stats.getStats()
 
-        self.assertEqual(len(stats), 6)
+        self.assertEqual(len(stats), 7)
+        self.assertEqual(stats["window"], 2)
         self.assertEqual(stats["total_count"], 3)
         self.assertEqual(stats["total_size"], 36)
         self.assertGreater(stats["total_time"], 0.4)  # duration will always be a bit greater than 0.4
         self.assertLess(stats["total_freq"], 7.5)
         self.assertLess(stats["total_bw"], 90)
         samples = stats["data"]
-        self.assertEqual(len(samples), 5)
+        self.assertEqual(len(samples), 6)
         self.assertGreater(samples["timestamp"][0], 0.2)
-        self.assertEqual(get_dict_from_samples(samples, 0), {"max": 6, "mean": 3.0, "min": 0, "stddev": 3.0})
-        self.assertEqual(get_dict_from_samples(samples, 1), {"max": 10, "mean": 8.0, "min": 6, "stddev": 2.0})
-        self.assertEqual(get_dict_from_samples(samples, 2), {"max": 20, "mean": 15.0, "min": 10, "stddev": 5.0})
-
-
-## ===================================================
-
-
-class ValueBufferTest(unittest.TestCase):
-    def setUp(self):
-        ## Called before testfunction is executed
-        pass
-
-    def tearDown(self):
-        ## Called after testfunction was executed
-        pass
-
-    def test_add_empty(self):
-        buffer = ListValueBuffer()
-        self.assertEqual(len(buffer), 0)
-        self.assertEqual(buffer.min(), 0)
-        self.assertEqual(buffer.max(), 0)
-        self.assertEqual(buffer.sum(), 0)
-        self.assertEqual(buffer.mean(), 0)
-        self.assertEqual(buffer.stddev(), 0)
-
-    def test_add_infinite(self):
-        buffer = ListValueBuffer()
-        buffer.add(6)
-        buffer.add(10)
-        buffer.add(20)
-        self.assertEqual(len(buffer), 3)
-        self.assertEqual(buffer.min(), 6)
-        self.assertEqual(buffer.max(), 20)
-        self.assertEqual(buffer.sum(), 36)
-        self.assertEqual(buffer.mean(), 12)
-        self.assertEqual(buffer.stddev(), 5.887840577551898)
-
-
-class RingValueBufferTest(unittest.TestCase):
-    def setUp(self):
-        ## Called before testfunction is executed
-        pass
-
-    def tearDown(self):
-        ## Called after testfunction was executed
-        pass
-
-    def test_add_empty(self):
-        buffer = RingValueBuffer()
-        self.assertEqual(len(buffer), 0)
-        self.assertEqual(buffer.min(), 0)
-        self.assertEqual(buffer.max(), 0)
-        self.assertEqual(buffer.sum(), 0)
-        self.assertEqual(buffer.mean(), 0)
-        self.assertEqual(buffer.stddev(), 0)
-
-    def test_add_limited(self):
-        buffer = RingValueBuffer(2)
-        buffer.add(5)  # will be ignored
-        buffer.add(10)
-        buffer.add(20)
-        self.assertEqual(len(buffer), 2)
-        self.assertEqual(buffer.min(), 10)
-        self.assertEqual(buffer.max(), 20)
-        self.assertEqual(buffer.sum(), 30)
-        self.assertEqual(buffer.mean(), 15)
-        self.assertEqual(buffer.stddev(), 5.0)
-
-    def test_add_limited_02(self):
-        buffer = RingValueBuffer(3)
-        buffer.add(2)  # will be ignored
-        buffer.add(6)
-        buffer.add(10)
-        buffer.add(20)
-        self.assertEqual(len(buffer), 3)
-        self.assertEqual(buffer.min(), 6)
-        self.assertEqual(buffer.max(), 20)
-        self.assertEqual(buffer.sum(), 36)
-        self.assertEqual(buffer.mean(), 12)
-        self.assertEqual(buffer.stddev(), 5.887840577551898)
+        self.assertEqual(
+            {"size": 6, "size_max": 6, "size_mean": 3.0, "size_min": 0, "size_stddev": 3.0},
+            get_dict_from_samples(samples, 0),
+        )
+        self.assertEqual(
+            {"size": 10, "size_max": 10, "size_mean": 8.0, "size_min": 6, "size_stddev": 2.0},
+            get_dict_from_samples(samples, 1),
+        )
+        self.assertEqual(
+            {"size": 20, "size_max": 20, "size_mean": 15.0, "size_min": 10, "size_stddev": 5.0},
+            get_dict_from_samples(samples, 2),
+        )
 
 
 def get_dict_from_samples(samples_data, row_index):
