@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import json
 
 from rostopicmonitor.sizecalculator import AbstractCalculator
-from rostopicmonitor.topicstats import BaseTopicStats, WindowTopicStats
+from rostopicmonitor.topicstats import BaseTopicStats, ElapsedTime
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,17 +25,18 @@ class TopicListener(ABC):
         self.topic_name = topic_name
         self.message_class = topic_type
         self.message_calc: AbstractCalculator = self._generateCalculator()
-        self.stats: BaseTopicStats = WindowTopicStats()
+        self.elapsed_time: ElapsedTime = ElapsedTime()
+        self.stats: BaseTopicStats = None
 
     def setStatsCollector(self, collector: BaseTopicStats):
         self.stats = collector
 
     def start(self):
-        self.stats.start()
+        self.elapsed_time.start()
         self._startMonitor()
 
     def stop(self):
-        self.stats.stop()
+        self.elapsed_time.stop()
 
     @abstractmethod
     def _generateCalculator(self) -> AbstractCalculator:
@@ -58,8 +59,9 @@ class TopicListener(ABC):
         _LOGGER.info("topic %s data:\n%s", self.topic_name, json.dumps(stats_dict, indent=4))
 
     def _updateState(self, data):
-        if self.stats.isStopped():
+        if self.elapsed_time.isStopped():
             # stop requested - do not consider more data
             return
+        msg_time = self.elapsed_time.getCurrentDuration()
         msg_size = self.message_calc.calculate(data)
-        self.stats.update(msg_size)
+        self.stats.update(msg_time, msg_size)

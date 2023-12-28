@@ -165,5 +165,4 @@ class RingValueBuffer(ValueBuffer):
         if self.count < self.buffer_size:
             size = len(self)
             return self.values[0:size]
-        else:
-            return self.values
+        return self.values

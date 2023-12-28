@@ -13,6 +13,7 @@ import time
 
 from rostopicmonitor.sizecalculator import AbstractCalculator
 from rostopicmonitor.topiclistener import TopicListener
+from rostopicmonitor.topicstats import WindowTopicStats
 
 from testrostopicmonitor.localsizecalculator import generate_calculator as generate_calculator_mock, generate_type
 
@@ -36,6 +37,7 @@ class TopicListenerTest(unittest.TestCase):
         MessageClass = generate_type(["int32"])
 
         topic_mon = TopicListenerMock("/test_topic", MessageClass)
+        topic_mon.setStatsCollector(WindowTopicStats())
         topic_mon.start()
 
         time.sleep(0.2)
