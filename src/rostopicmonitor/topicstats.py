@@ -59,6 +59,10 @@ class BaseTopicStats(ABC):
     def getStats(self):
         raise NotImplementedError("You need to define this method in derived class!")
 
+    @abstractmethod
+    def getStatsSummary(self):
+        raise NotImplementedError("You need to define this method in derived class!")
+
 
 class RawTopicStats(BaseTopicStats):
     def __init__(self):
@@ -76,13 +80,13 @@ class RawTopicStats(BaseTopicStats):
         self.samples.append((data_time, data_size))
 
     def getStats(self):
-        stats_dict = self._getStatsHeader()
+        stats_dict = self.getStatsSummary()
         timestamps = [sample[0] for sample in self.samples]
         sizes = [sample[1] for sample in self.samples]
         stats_dict["data"] = {"time": timestamps, "size": sizes}
         return stats_dict
 
-    def _getStatsHeader(self):
+    def getStatsSummary(self):
         total_count = len(self.samples)
         total_size = sum([sample[1] for sample in self.samples])
 
@@ -112,8 +116,7 @@ class WindowTopicStats(RawTopicStats):
         self.window_size = window_size
 
     def getStats(self):
-        stats_dict = self._getStatsHeader()
-        stats_dict["window"] = self.window_size
+        stats_dict = self.getStatsSummary()
 
         dict_list = []
         size_buffer: ValueBuffer = self._spawnBuffer()
@@ -151,6 +154,11 @@ class WindowTopicStats(RawTopicStats):
             stats_list = convert_listdicts_dictlists(dict_list)
         stats_dict["data"] = stats_list
 
+        return stats_dict
+
+    def getStatsSummary(self):
+        stats_dict = super().getStatsSummary()
+        stats_dict["window"] = self.window_size
         return stats_dict
 
     def _spawnBuffer(self) -> ValueBuffer:

@@ -71,7 +71,7 @@ def write_pandas_file(out_file_path, data_dict, out_format, summary_data=None):
     numpy_list = []
 
     if summary_data:
-        summary_dataframe = pandas.DataFrame.from_dict(summary_data)
+        summary_dataframe = summary_to_numpy(summary_data)
         numpy_list.append(summary_dataframe)
 
     for data in data_dict.values():
@@ -96,7 +96,7 @@ def write_pandas_dir(out_dir, data_dict, out_format, summary_data=None):
 
     if summary_data:
         file_out_path = os.path.join(out_dir, f"summary.{out_format}")
-        summary_dataframe = pandas.DataFrame.from_dict(summary_data)
+        summary_dataframe = summary_to_numpy(summary_data)
         write_pandas_simple_file(file_out_path, [summary_dataframe], out_format)
 
 
@@ -108,3 +108,7 @@ def dict_to_numpy(data_dict):
     numpy_samples_data = pandas.DataFrame.from_dict(data_samples)
 
     return (numpy_header_data, numpy_samples_data)
+
+
+def summary_to_numpy(summary_data):
+    return pandas.DataFrame.from_dict(summary_data)

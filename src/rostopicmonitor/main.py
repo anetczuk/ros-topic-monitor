@@ -12,6 +12,7 @@ import os
 import logging
 import argparse
 import re
+import datetime
 
 import rostopic
 import rospy
@@ -19,7 +20,7 @@ import rospy
 from rostopicmonitor.rostopiclistener import ROSTopicListener
 from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
-from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir
+from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir, summary_to_numpy
 from rostopicmonitor.utils import convert_listdicts_dictlists
 
 
@@ -100,6 +101,8 @@ def execute_listeners(listeners_dict, args):
 
     _LOGGER.info("Starting listening")
 
+    start_time = datetime.datetime.now()
+
     mon_duration = args.duration
     if mon_duration < 1:
         # simply keeps python from exiting until this node is stopped
@@ -108,6 +111,9 @@ def execute_listeners(listeners_dict, args):
         # spin ROS for given time
         rospy.sleep(mon_duration)
         rospy.signal_shutdown("timeout")
+
+    duration = datetime.datetime.now() - start_time
+    _LOGGER.info("Listening duration: %s", duration)
 
     for listener in listeners_dict.values():
         listener.stop()
@@ -121,24 +127,25 @@ def store_data(listeners_dict, args):
     out_dir = args.outdir
     if not out_file and not out_dir:
         # nothing to store
+        _LOGGER.info("Calculating summary")
+        data_dict = get_stats(listeners_dict, with_data=False)
+        summary_dict = calculate_summary(data_dict)
+        summary_dataframe = summary_to_numpy(summary_dict)
+        _LOGGER.info("Summary:\n%s", summary_dataframe)
         _LOGGER.info("nothing to store (no file or dir passed to store data)")
         return
 
     _LOGGER.info("Calculating statistics")
-    data_dict = {}
-    for topic, listener in listeners_dict.items():
-        stats_data = listener.getStats()
-        data_dict[topic] = stats_data
-    data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
+    data_dict = get_stats(listeners_dict, with_data=True)
 
     summary_dict = {}
     calc_summary = not args.nosummary
     if calc_summary:
         # calculate summary dict
         _LOGGER.info("Calculating summary")
-        data_list = list(data_dict.values())
-        summary_dict = convert_listdicts_dictlists(data_list)
-        summary_dict.pop("data")
+        summary_dict = calculate_summary(data_dict)
+        summary_dataframe = summary_to_numpy(summary_dict)
+        _LOGGER.info("Summary:\n%s", summary_dataframe)
 
     out_format = args.outformat
     if out_format == "json":
@@ -146,7 +153,7 @@ def store_data(listeners_dict, args):
             _LOGGER.info("Writing output to file: %s", out_file)
             dir_path = os.path.dirname(os.path.realpath(out_file))
             os.makedirs(dir_path, exist_ok=True)
-            write_json_file(out_file, data_dict)        # do not store summary_dict in single file mode
+            write_json_file(out_file, data_dict)  # do not store summary_dict in single file mode
 
         if out_dir:
             _LOGGER.info("Writing output to directory: %s", out_dir)
@@ -164,6 +171,27 @@ def store_data(listeners_dict, args):
             _LOGGER.info("Writing output to directory: %s", out_dir)
             os.makedirs(out_dir, exist_ok=True)
             write_pandas_dir(out_dir, data_dict, out_format, summary_dict)
+
+
+def get_stats(listeners_dict, with_data=True):
+    data_dict = {}
+    if with_data:
+        for topic, listener in listeners_dict.items():
+            stats_data = listener.getStats()
+            data_dict[topic] = stats_data
+    else:
+        for topic, listener in listeners_dict.items():
+            stats_data = listener.getStatsSummary()
+            data_dict[topic] = stats_data
+    data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
+    return data_dict
+
+
+def calculate_summary(data_dict):
+    data_list = list(data_dict.values())
+    summary_dict = convert_listdicts_dictlists(data_list)
+    summary_dict.pop("data")
+    return summary_dict
 
 
 def filter_items(items_list, regex_list):
