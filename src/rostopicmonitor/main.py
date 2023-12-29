@@ -32,9 +32,7 @@ _LOGGER = logging.getLogger(_MAIN_LOGGER_NAME)
 # ============================================================
 
 
-def process_list(args):
-    init_logger(args.logall)
-
+def process_list(_):
     try:
         topics_list = get_all_publishers()
         # _LOGGER.info("found topics:\n%s", topics_list)
@@ -223,9 +221,7 @@ def init_ros_node(logall=False):
     rospy.init_node("topic_monitor", anonymous=True)
     rospy.on_shutdown(shutdown_node)
 
-    init_logger(logall)
-
-    # configure logger to receive messages to command line
+    # configure logger to receive messages to command line (rospy overrides logging configuration)
     consoleHandler = logging.StreamHandler(stream=sys.stdout)
     if logall:
         formatter = logging.Formatter(_LOGGER_ALL_FORMAT)
@@ -363,6 +359,8 @@ def main():
     ## =================================================
 
     args = parser.parse_args()
+
+    init_logger(args.logall)
 
     if args.listtools is True:
         tools_list = list(subparsers.choices.keys())

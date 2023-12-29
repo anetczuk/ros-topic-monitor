@@ -23,6 +23,14 @@ def generate_type(subtype_name_list):
     return Dict2Obj(data)
 
 
+def generate_data(values_list):
+    list_size = len(values_list)
+    data = {}
+    for i in range(0, list_size):
+        data[f"f{i}"] = values_list[i]
+    return Dict2Obj(data)
+
+
 def generate_calculator(msg_class) -> AbstractCalculator:
     factory = LocalCalculatorFactory()
     return factory.generate(msg_class)
@@ -36,4 +44,4 @@ class LocalCalculatorFactory(CalculatorFactory):
         return TYPE_SIZES.get(type_name)
 
 
-TYPE_SIZES = {"int32": 4}
+TYPE_SIZES = {"int32": 4, "int64": 8}

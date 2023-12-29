@@ -8,6 +8,7 @@
 
 import logging
 from typing import Dict
+import re
 from abc import ABC, abstractmethod
 
 
@@ -51,7 +52,7 @@ class ConstCalculator(AbstractCalculator):
         return self.type_size
 
 
-# array of types of fixed-length size
+# var length array of types of fixed-length size
 class FixedArrayCalculator(AbstractCalculator):
     def __init__(self, type_size: int):
         self.type_size: int = type_size
@@ -66,7 +67,26 @@ class FixedArrayCalculator(AbstractCalculator):
         return self.type_size * len(field_data) + 4  # +4 for array length
 
 
-# array of types of variable size
+# const length array of types of variable size
+class ConstArrayCalculator(AbstractCalculator):
+    def __init__(self, type_calc: AbstractCalculator):
+        self.type_calc: AbstractCalculator = type_calc
+
+    def isFixed(self) -> bool:
+        return False
+
+    def getFixedSize(self) -> int:
+        return self.type_calc.getFixedSize()
+
+    def calculate(self, field_data) -> int:
+        # field_data is an array
+        field_size: int = 0
+        for value in field_data:
+            field_size += self.type_calc.calculate(value)
+        return field_size
+
+
+# var length array of types of variable size
 class VarArrayCalculator(AbstractCalculator):
     def __init__(self, type_calc: AbstractCalculator):
         self.type_calc: AbstractCalculator = type_calc
@@ -159,7 +179,6 @@ class CalculatorFactory(ABC):
             return FixedArrayCalculator(1)
 
         if type_name.endswith("[]"):
-            # +4 bytes for array length
             arr_type_name = type_name[: len(type_name) - 2]
             arr_type_calc = self.generateByName(arr_type_name)
             if not arr_type_calc:
@@ -169,8 +188,24 @@ class CalculatorFactory(ABC):
                 return FixedArrayCalculator(type_size)
             return VarArrayCalculator(arr_type_calc)
 
+        array_size = re.findall(r"\[(\d+)\]", type_name)
+        if array_size:
+            # array size found
+            array_size = int(array_size[-1])  # type: ignore
+            arr_type_name = extract_array_subtype(type_name)
+            arr_type_calc = self.generateByName(arr_type_name)
+            if not arr_type_calc:
+                return None
+            if arr_type_calc.isFixed():
+                type_size = arr_type_calc.getFixedSize()
+                return ConstCalculator(type_size * array_size)
+            return ConstArrayCalculator(arr_type_calc)
+
         try:
             subtype = self.getTypeByName(type_name)
+            if subtype is None:
+                _LOGGER.warning("unhandled type: %s", type_name)
+                return None
             # subtype = roslib.message.get_message_class(type_name)
             return self.generate(subtype)
         except:  # noqa pylint: disable=W0702
@@ -187,3 +222,11 @@ class CalculatorFactory(ABC):
     def getBaseTypeSize(self, type_name):
         """Return size of type by it's name."""
         raise NotImplementedError("You need to define this method in derived class!")
+
+
+def extract_array_subtype(array_type_name):
+    bracet_index = array_type_name.rfind("[")
+    if bracet_index < 0:
+        _LOGGER.warning("unable to extract array subtype from %s", array_type_name)
+        return array_type_name
+    return array_type_name[:bracet_index]
