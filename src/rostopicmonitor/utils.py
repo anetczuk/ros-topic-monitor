@@ -14,3 +14,7 @@ def prepare_filesystem_name(name):
     new_name = new_name.replace("|", "_")
     new_name = new_name.replace("-", "_")
     return new_name
+
+
+def convert_listdicts_dictlists(dict_list):
+    return {dict_key: [item_dict[dict_key] for item_dict in dict_list] for dict_key in dict_list[0]}

@@ -35,7 +35,13 @@ class RawTopicStatsTest(unittest.TestCase):
         topic_stats.update(0.3, 20)
         stats = topic_stats.getStats()
 
-        self.assertEqual(len(stats), 1)
+        self.assertEqual(len(stats), 7)
+        self.assertEqual(stats["window"], 0)
+        self.assertEqual(stats["total_count"], 3)
+        self.assertEqual(stats["total_size"], 36)
+        self.assertEqual(stats["total_time"], 0.3)
+        self.assertEqual(stats["total_freq"], 10.0)
+        self.assertEqual(stats["total_bw"], 120)
         self.assertIn("data", stats)
         samples = stats["data"]
         self.assertEqual(len(samples), 2)

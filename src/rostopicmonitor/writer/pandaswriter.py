@@ -67,20 +67,37 @@ def write_pandas_simple_file(out_file_path, numpy_data_list, out_format):
                 worksheet.set_column(idx, idx, width)  # set column width
 
 
-def write_pandas_file(out_file_path, data_dict, out_format):
+def write_pandas_file(out_file_path, data_dict, out_format, summary_data=None):
     numpy_list = []
+
+    if summary_data:
+        summary_dataframe = pandas.DataFrame.from_dict(summary_data)
+        numpy_list.append(summary_dataframe)
+
     for data in data_dict.values():
         numpy_data_list = dict_to_numpy(data)
+        if summary_data:
+            numpy_samples_data = numpy_data_list[1]
+
+            if numpy_samples_data.empty:
+                continue
+
         numpy_list.extend(numpy_data_list)
+
     write_pandas_simple_file(out_file_path, numpy_list, out_format)
 
 
-def write_pandas_dir(out_dir, data_dict, out_format):
+def write_pandas_dir(out_dir, data_dict, out_format, summary_data=None):
     for topic, data in data_dict.items():
         file_name = prepare_filesystem_name(topic)
         file_out_path = os.path.join(out_dir, f"{file_name}.{out_format}")
         numpy_data_list = dict_to_numpy(data)
         write_pandas_simple_file(file_out_path, numpy_data_list, out_format)
+
+    if summary_data:
+        file_out_path = os.path.join(out_dir, f"summary.{out_format}")
+        summary_dataframe = pandas.DataFrame.from_dict(summary_data)
+        write_pandas_simple_file(file_out_path, [summary_dataframe], out_format)
 
 
 def dict_to_numpy(data_dict):

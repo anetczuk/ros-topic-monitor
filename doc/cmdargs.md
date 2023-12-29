@@ -37,7 +37,7 @@ optional arguments:
 ## <a name="raw_help"></a> rostopicmon.py raw --help
 ```
 usage: rostopicmon.py raw [-h] [-la] [--topic N [N ...]] [--duration DURATION]
-                          [--outfile OUTFILE] [--outdir OUTDIR]
+                          [--nosummary] [--outfile OUTFILE] [--outdir OUTDIR]
                           [--outformat {json,csv,xls,xlsx}]
 
 collect and store raw data (sizes of messages)
@@ -50,6 +50,7 @@ optional arguments:
                         '/ros.*'
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
+  --nosummary           Do not generate topics summary.
   --outfile OUTFILE     Path to output file (store collected data in single
                         file).
   --outdir OUTDIR       Path to output dir (store collected data in
@@ -63,8 +64,8 @@ optional arguments:
 ## <a name="stats_help"></a> rostopicmon.py stats --help
 ```
 usage: rostopicmon.py stats [-h] [-la] [--topic N [N ...]]
-                            [--duration DURATION] [--outfile OUTFILE]
-                            [--outdir OUTDIR]
+                            [--duration DURATION] [--nosummary]
+                            [--outfile OUTFILE] [--outdir OUTDIR]
                             [--outformat {json,csv,xls,xlsx}] [-w WINDOW]
 
 collect and store stats data
@@ -77,6 +78,7 @@ optional arguments:
                         '/ros.*'
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
+  --nosummary           Do not generate topics summary.
   --outfile OUTFILE     Path to output file (store collected data in single
                         file).
   --outdir OUTDIR       Path to output dir (store collected data in

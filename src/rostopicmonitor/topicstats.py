@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 import datetime
 
 from rostopicmonitor.valuebuffer import ValueBuffer, ListValueBuffer, RingValueBuffer
+from rostopicmonitor.utils import convert_listdicts_dictlists
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,46 +76,45 @@ class RawTopicStats(BaseTopicStats):
         self.samples.append((data_time, data_size))
 
     def getStats(self):
+        stats_dict = self._getStatsHeader()
         timestamps = [sample[0] for sample in self.samples]
         sizes = [sample[1] for sample in self.samples]
-        return {"data": {"time": timestamps, "size": sizes}}
+        stats_dict["data"] = {"time": timestamps, "size": sizes}
+        return stats_dict
 
+    def _getStatsHeader(self):
+        total_count = len(self.samples)
+        total_size = sum([sample[1] for sample in self.samples])
 
-class WindowTopicStats(RawTopicStats):
-    def __init__(self, window_size=0):
-        super().__init__()
-        self.total_count = 0
-        self.total_size = 0
-        self.window_size = window_size
-
-    def reset(self):
-        super().reset()
-        self.total_count = 0
-        self.total_size = 0
-
-    def update(self, data_time, data_size):
-        super().update(data_time, data_size)
-        self.total_count += 1
-        self.total_size += data_size
-
-    def getStats(self):
         stats_dict = {
             # total stats
-            "window": self.window_size,
-            "total_count": self.total_count,
-            "total_size": self.total_size,
+            "window": 0,
+            "total_count": total_count,
+            "total_size": total_size,
         }
-        if self.total_count < 1:
+        if total_count < 1:
             stats_dict.update({"total_time": 0, "total_freq": "", "total_bw": ""})
         else:
             duration_secs = self.getDuration()
             stats_dict.update(
                 {
                     "total_time": duration_secs,
-                    "total_freq": float(self.total_count) / duration_secs,
-                    "total_bw": float(self.total_size) / duration_secs,
+                    "total_freq": float(total_count) / duration_secs,
+                    "total_bw": float(total_size) / duration_secs,
                 }
             )
+        return stats_dict
+
+
+class WindowTopicStats(RawTopicStats):
+    def __init__(self, window_size=0):
+        super().__init__()
+        self.window_size = window_size
+
+    def getStats(self):
+        stats_dict = self._getStatsHeader()
+        stats_dict["window"] = self.window_size
+
         dict_list = []
         size_buffer: ValueBuffer = self._spawnBuffer()
         time_buffer: ValueBuffer = self._spawnBuffer()
@@ -148,8 +148,9 @@ class WindowTopicStats(RawTopicStats):
 
         stats_list = {}
         if dict_list:
-            stats_list = {dict_key: [item_dict[dict_key] for item_dict in dict_list] for dict_key in dict_list[0]}
+            stats_list = convert_listdicts_dictlists(dict_list)
         stats_dict["data"] = stats_list
+
         return stats_dict
 
     def _spawnBuffer(self) -> ValueBuffer:

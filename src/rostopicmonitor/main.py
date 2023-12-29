@@ -20,6 +20,7 @@ from rostopicmonitor.rostopiclistener import ROSTopicListener
 from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
 from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir
+from rostopicmonitor.utils import convert_listdicts_dictlists
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -97,6 +98,8 @@ def execute_listeners(listeners_dict, args):
     for listener in listeners_dict.values():
         listener.start()
 
+    _LOGGER.info("Starting listening")
+
     mon_duration = args.duration
     if mon_duration < 1:
         # simply keeps python from exiting until this node is stopped
@@ -121,36 +124,46 @@ def store_data(listeners_dict, args):
         _LOGGER.info("nothing to store (no file or dir passed to store data)")
         return
 
+    _LOGGER.info("Calculating statistics")
     data_dict = {}
     for topic, listener in listeners_dict.items():
         stats_data = listener.getStats()
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
 
+    summary_dict = {}
+    calc_summary = not args.nosummary
+    if calc_summary:
+        # calculate summary dict
+        _LOGGER.info("Calculating summary")
+        data_list = list(data_dict.values())
+        summary_dict = convert_listdicts_dictlists(data_list)
+        summary_dict.pop("data")
+
     out_format = args.outformat
     if out_format == "json":
         if out_file:
-            _LOGGER.info("writing output to file: %s", out_file)
+            _LOGGER.info("Writing output to file: %s", out_file)
             dir_path = os.path.dirname(os.path.realpath(out_file))
             os.makedirs(dir_path, exist_ok=True)
-            write_json_file(out_file, data_dict)
+            write_json_file(out_file, data_dict)        # do not store summary_dict in single file mode
 
         if out_dir:
-            _LOGGER.info("writing output to directory: %s", out_dir)
+            _LOGGER.info("Writing output to directory: %s", out_dir)
             os.makedirs(out_dir, exist_ok=True)
-            write_json_dir(out_dir, data_dict)
+            write_json_dir(out_dir, data_dict, summary_dict)
     else:
         if out_file:
             out_file_path = f"{out_file}.{out_format}"
-            _LOGGER.info("writing output to file: %s", out_file_path)
+            _LOGGER.info("Writing output to file: %s", out_file_path)
             dir_path = os.path.dirname(os.path.realpath(out_file_path))
             os.makedirs(dir_path, exist_ok=True)
-            write_pandas_file(out_file_path, data_dict, out_format)
+            write_pandas_file(out_file_path, data_dict, out_format, summary_dict)
 
         if out_dir:
-            _LOGGER.info("writing output to directory: %s", out_dir)
+            _LOGGER.info("Writing output to directory: %s", out_dir)
             os.makedirs(out_dir, exist_ok=True)
-            write_pandas_dir(out_dir, data_dict, out_format)
+            write_pandas_dir(out_dir, data_dict, out_format, summary_dict)
 
 
 def filter_items(items_list, regex_list):
@@ -236,6 +249,7 @@ def add_common_args(parser):
         default=0,
         help="Set monitor time in seconds. Stop application after timeout.",
     )
+    parser.add_argument("--nosummary", action="store_true", help="Do not generate topics summary.")
     parser.add_argument(
         "--outfile",
         action="store",
