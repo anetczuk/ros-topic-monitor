@@ -17,11 +17,25 @@ Description of command-line arguments can be found [here](doc/cmdargs.md).
 Installation of package can be done by:
  - to install package from downloaded ZIP file execute: `pip3 install --user file:ros-topic-monitor-master.zip#subdirectory=src`
  - to install package directly from GitHub execute: `pip3 install --user git+https://github.com/anetczuk/ros-topic-monitor.git#subdirectory=src`
+ - uninstall: `pip3 uninstall --user ros-topic-monitor`
 
 Installation For development:
  - `install-deps.sh` to install package dependencies only (`requirements.txt`)
  - `install-package.sh` to install package in standard way through `pip` (with dependencies)
  - `install-package-dev.sh` to install package in developer mode using `pip` (with dependencies)
+
+
+## Running application
+
+To run application try one of:
+- `rostopicmon.py --help`
+- `python3 -m rostopicmonitor --help`
+
+to receive [cmd help](doc/cmdargs.md).
+
+To grab stats from all topics simply run `python3 -m rostopicmonitor stats --outdir outdata`
+
+For more advanced usage see [help](doc/cmdargs.md).
 
 
 ## References
