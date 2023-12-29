@@ -186,7 +186,8 @@ def filter_items(items_list, regex_list):
 ## =====================================================
 
 
-_LOGGER_FORMAT = "%(levelname)-8s %(name)-12s: %(message)s"
+_LOGGER_SIMPLE_FORMAT = "%(levelname)-8s %(name)-12s: %(message)s"
+_LOGGER_ALL_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)-12s: %(message)s"
 
 
 def init_ros_node(logall=False):
@@ -198,7 +199,10 @@ def init_ros_node(logall=False):
 
     # configure logger to receive messages to command line
     consoleHandler = logging.StreamHandler(stream=sys.stdout)
-    formatter = logging.Formatter(_LOGGER_FORMAT)
+    if logall:
+        formatter = logging.Formatter(_LOGGER_ALL_FORMAT)
+    else:
+        formatter = logging.Formatter(_LOGGER_SIMPLE_FORMAT)
     consoleHandler.setFormatter(formatter)
 
     main_logger = logging.getLogger(_MAIN_LOGGER_NAME)
@@ -207,7 +211,10 @@ def init_ros_node(logall=False):
 
 def init_logger(logall=False):
     # configure loggers AFTER 'init_node'
-    logging.basicConfig(format=_LOGGER_FORMAT)
+    if logall:
+        logging.basicConfig(format=_LOGGER_ALL_FORMAT)
+    else:
+        logging.basicConfig(format=_LOGGER_SIMPLE_FORMAT)
 
     main_logger = logging.getLogger(_MAIN_LOGGER_NAME)
     if logall:
