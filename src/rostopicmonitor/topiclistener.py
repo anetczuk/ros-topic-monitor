@@ -19,6 +19,30 @@ _LOGGER = logging.getLogger(__name__)
 ## =====================================================
 
 
+class StatsObject:
+    def __init__(self, header_dict, stats):
+        self.header = header_dict
+        self.stats: BaseTopicStats = stats
+
+    def getStats(self):
+        stats_dict = self.stats.getStats()
+        topic_data = self.header.copy()
+        topic_data.update(stats_dict)
+        return topic_data
+
+    def getStatsRaw(self):
+        stats_dict = self.stats.getStatsRaw()
+        topic_data = self.header.copy()
+        topic_data.update(stats_dict)
+        return topic_data
+
+    def getStatsSummary(self):
+        stats_dict = self.stats.getStatsSummary()
+        topic_data = self.header.copy()
+        topic_data.update(stats_dict)
+        return topic_data
+
+
 class TopicListener:
     def __init__(self, topic_name, message_calc: AbstractCalculator):
         self.topic_name = topic_name
@@ -43,23 +67,9 @@ class TopicListener:
         msg_size = self.message_calc.calculate(msg_data)
         self.stats.update(msg_time, msg_size)
 
-    def getStats(self):
-        stats_dict = self.stats.getStats()
-        topic_data = {"topic": self.topic_name, "fixed_size:": self.message_calc.isFixed()}
-        topic_data.update(stats_dict)
-        return topic_data
-
-    def getStatsRaw(self):
-        stats_dict = self.stats.getStatsRaw()
-        topic_data = {"topic": self.topic_name, "fixed_size:": self.message_calc.isFixed()}
-        topic_data.update(stats_dict)
-        return topic_data
-
-    def getStatsSummary(self):
-        stats_dict = self.stats.getStatsSummary()
-        topic_data = {"topic": self.topic_name, "fixed_size:": self.message_calc.isFixed()}
-        topic_data.update(stats_dict)
-        return topic_data
+    def getStatsObject(self) -> StatsObject:
+        topic_data = {"topic": self.topic_name, "fixed_size": self.message_calc.isFixed()}
+        return StatsObject(topic_data, self.stats)
 
     def printInfo(self):
         stats_dict = self.stats.getStats()

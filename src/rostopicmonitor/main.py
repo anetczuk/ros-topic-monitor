@@ -16,13 +16,11 @@ import datetime
 import json
 from typing import Dict
 
-from rostopicmonitor.rostopiclistener import ROSTopicListener
 from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
 from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir, summary_to_numpy
 from rostopicmonitor.utils import convert_listdicts_dictlists
-from rostopicmonitor.topiclistener import TopicListener
-from rostopicmonitor.rosutils import get_all_publishers, ros_spin, ros_init
+from rostopicmonitor.topiclistener import TopicListener, StatsObject
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -35,7 +33,7 @@ _LOGGER = logging.getLogger(_MAIN_LOGGER_NAME)
 
 def process_list(_):
     try:
-        topics_list = get_all_publishers()
+        topics_list = get_publishers()
         # _LOGGER.info("found topics:\n%s", topics_list)
         _LOGGER.info("found topics:\n%s", "\n".join(topics_list))
     except ConnectionRefusedError:
@@ -52,7 +50,8 @@ def process_raw(args):
         listener.setStatsCollector(collector)
 
     execute_listeners(listeners_dict, args)
-    store_data(listeners_dict, args)
+    stats_dict: Dict[str, StatsObject] = extract_stats_obj_dict(listeners_dict)
+    store_data(stats_dict, args)
 
 
 def process_stats(args):
@@ -78,16 +77,15 @@ def process_stats_file(args):
     window_size = args.window
 
     # listener: TopicListener
-    listeners_dict: Dict[str, TopicListener] = {}
+    stats_dict: Dict[str, StatsObject] = {}
     for topic in topics_list:
-        listener = ROSTopicListener(topic)
         data_dict = raw_dict.get(topic, {})
+        header_dict = {"topic": data_dict["topic"], "fixed_size": data_dict["fixed_size"]}
         collector = WindowTopicStats(window_size)
         collector.setSamplesFromDict(data_dict)
-        listener.setStatsCollector(collector)
-        listeners_dict[topic] = listener
+        stats_dict[topic] = StatsObject(header_dict, collector)
 
-    store_data(listeners_dict, args)
+    store_data(stats_dict, args)
 
 
 def process_stats_ros(args):
@@ -102,15 +100,19 @@ def process_stats_ros(args):
         listener.setStatsCollector(collector)
 
     execute_listeners(listeners_dict, args)
-    store_data(listeners_dict, args)
+    stats_dict: Dict[str, StatsObject] = extract_stats_obj_dict(listeners_dict)
+    store_data(stats_dict, args)
 
 
 # ============================================================
 
 
 def init_listeners(topic_filter) -> Dict[str, TopicListener]:
+    # not nice, but allows running some functionality on machine without ROS
+    from rostopicmonitor.rostopiclistener import ROSTopicListener
+
     try:
-        topics_list = get_all_publishers()
+        topics_list = get_publishers()
     except ConnectionRefusedError:
         _LOGGER.error("master not running")
         return {}
@@ -126,6 +128,9 @@ def init_listeners(topic_filter) -> Dict[str, TopicListener]:
 
 
 def execute_listeners(listeners_dict: Dict[str, TopicListener], args):
+    # not nice, but allows running some functionality on machine without ROS
+    from rostopicmonitor.rosutils import ros_spin
+
     init_ros_node(args.logall)
 
     for listener in listeners_dict.values():
@@ -144,8 +149,15 @@ def execute_listeners(listeners_dict: Dict[str, TopicListener], args):
         listener.stop()
 
 
-def store_data(listeners_dict: Dict[str, TopicListener], args):
-    if not listeners_dict:
+def extract_stats_obj_dict(listeners_dict: Dict[str, TopicListener]) -> Dict[str, StatsObject]:
+    stats_dict: Dict[str, StatsObject] = {}
+    for topic, listener in listeners_dict.items():
+        stats_dict[topic] = listener.getStatsObject()
+    return stats_dict
+
+
+def store_data(stats_dict: Dict[str, StatsObject], args):
+    if not stats_dict:
         return
 
     out_file = args.outfile
@@ -153,7 +165,7 @@ def store_data(listeners_dict: Dict[str, TopicListener], args):
     if not out_file and not out_dir:
         # nothing to store
         _LOGGER.info("Calculating summary")
-        data_dict = get_stats_summary(listeners_dict)
+        data_dict = get_stats_summary(stats_dict)
         summary_dict = calculate_summary(data_dict)
         summary_dataframe = summary_to_numpy(summary_dict)
         _LOGGER.info("Summary:\n%s", summary_dataframe)
@@ -161,7 +173,7 @@ def store_data(listeners_dict: Dict[str, TopicListener], args):
         return
 
     _LOGGER.info("Calculating statistics")
-    data_dict = get_stats(listeners_dict)
+    data_dict = get_stats(stats_dict)
 
     out_format = args.outformat
     calc_summary = not args.nosummary
@@ -169,7 +181,7 @@ def store_data(listeners_dict: Dict[str, TopicListener], args):
     store_data_dict(data_dict, out_file, out_dir, out_format, calc_summary)
 
     if "nostoreraw" in args and not args.nostoreraw:
-        raw_dict = get_stats_raw(listeners_dict)
+        raw_dict = get_stats_raw(stats_dict)
         store_raw_data(raw_dict, out_file, out_dir)
 
 
@@ -208,7 +220,6 @@ def store_data_dict(data_dict, out_file=None, out_dir=None, out_format=None, cal
 
 
 def store_raw_data(data_dict, out_file=None, out_dir=None):
-    # get_stats_raw
     if out_file:
         out_raw_path = f"{out_file}.raw.json"
         _LOGGER.info("Writing raw data to file: %s", out_raw_path)
@@ -220,27 +231,27 @@ def store_raw_data(data_dict, out_file=None, out_dir=None):
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
 
-def get_stats(listeners_dict: Dict[str, TopicListener]):
+def get_stats(stats_dict: Dict[str, StatsObject]):
     data_dict = {}
-    for topic, listener in listeners_dict.items():
+    for topic, listener in stats_dict.items():
         stats_data = listener.getStats()
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
     return data_dict
 
 
-def get_stats_raw(listeners_dict: Dict[str, TopicListener]):
+def get_stats_raw(stats_dict: Dict[str, StatsObject]):
     data_dict = {}
-    for topic, listener in listeners_dict.items():
+    for topic, listener in stats_dict.items():
         stats_data = listener.getStatsRaw()
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
     return data_dict
 
 
-def get_stats_summary(listeners_dict: Dict[str, TopicListener]):
+def get_stats_summary(stats_dict: Dict[str, StatsObject]):
     data_dict = {}
-    for topic, listener in listeners_dict.items():
+    for topic, listener in stats_dict.items():
         stats_data = listener.getStatsSummary()
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
@@ -250,7 +261,8 @@ def get_stats_summary(listeners_dict: Dict[str, TopicListener]):
 def calculate_summary(data_dict):
     data_list = list(data_dict.values())
     summary_dict = convert_listdicts_dictlists(data_list)
-    summary_dict.pop("data")
+    if "data" in summary_dict:
+        summary_dict.pop("data")
     return summary_dict
 
 
@@ -279,6 +291,9 @@ _LOGGER_ALL_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)-12s: %(message)s"
 
 
 def init_ros_node(logall=False):
+    # not nice, but allows running some functionality on machine without ROS
+    from rostopicmonitor.rosutils import ros_init
+
     ros_init(shutdown_node)
 
     # configure logger to receive messages to command line (rospy overrides logging configuration)
@@ -309,6 +324,13 @@ def init_logger(logall=False):
 
 def shutdown_node():
     _LOGGER.info("Stopping monitor")
+
+
+def get_publishers():
+    # not nice, but allows running some functionality on machine without ROS
+    from rostopicmonitor.rosutils import get_all_publishers
+
+    return get_all_publishers()
 
 
 ## =====================================================

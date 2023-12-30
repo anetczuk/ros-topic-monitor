@@ -45,7 +45,8 @@ class TopicListenerTest(unittest.TestCase):
         time.sleep(0.2)
 
         topic_mon.stop()
-        stats = topic_mon.getStats()
+        stats_obj = topic_mon.getStatsObject()
+        stats = stats_obj.getStats()
 
         self.assertEqual(1, stats["total_count"])
         self.assertEqual(4, stats["total_size"])
