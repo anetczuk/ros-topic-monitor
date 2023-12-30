@@ -6,9 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import roslib
-
 from rostopicmonitor.sizecalculator import AbstractCalculator, CalculatorFactory
+from rostopicmonitor.rosutils import get_message_class_from_name
 
 
 ## =====================================================
@@ -21,7 +20,7 @@ def generate_calculator(msg_class) -> AbstractCalculator:
 
 class ROSCalculatorFactory(CalculatorFactory):
     def getTypeByName(self, type_name):
-        return roslib.message.get_message_class(type_name)
+        return get_message_class_from_name(type_name)
 
     def getBaseTypeSize(self, type_name):
         return BUILTIN_TYPE_SIZE.get(type_name)

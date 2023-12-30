@@ -16,15 +16,13 @@ import datetime
 import json
 from typing import Dict
 
-import rostopic
-import rospy
-
 from rostopicmonitor.rostopiclistener import ROSTopicListener
 from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
 from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir, summary_to_numpy
 from rostopicmonitor.utils import convert_listdicts_dictlists
 from rostopicmonitor.topiclistener import TopicListener
+from rostopicmonitor.rosutils import get_all_publishers, ros_spin, ros_init
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -137,14 +135,7 @@ def execute_listeners(listeners_dict: Dict[str, TopicListener], args):
 
     start_time = datetime.datetime.now()
 
-    mon_duration = args.duration
-    if mon_duration < 1:
-        # simply keeps python from exiting until this node is stopped
-        rospy.spin()
-    else:
-        # spin ROS for given time
-        rospy.sleep(mon_duration)
-        rospy.signal_shutdown("timeout")
+    ros_spin(args.duration)
 
     duration = datetime.datetime.now() - start_time
     _LOGGER.info("Listening duration: %s", duration)
@@ -286,9 +277,7 @@ _LOGGER_ALL_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)-12s: %(message)s"
 
 
 def init_ros_node(logall=False):
-    # anonymous=True flag means that rospy will choose a unique name
-    rospy.init_node("topic_monitor", anonymous=True)
-    rospy.on_shutdown(shutdown_node)
+    ros_init(shutdown_node)
 
     # configure logger to receive messages to command line (rospy overrides logging configuration)
     consoleHandler = logging.StreamHandler(stream=sys.stdout)
@@ -318,15 +307,6 @@ def init_logger(logall=False):
 
 def shutdown_node():
     _LOGGER.info("Stopping monitor")
-
-
-def get_all_publishers():
-    pubs_subs = rostopic.get_topic_list()
-    publishers = pubs_subs[0]
-
-    topics_list = set()
-    topics_list.update([pub[0] for pub in publishers])
-    return topics_list
 
 
 ## =====================================================

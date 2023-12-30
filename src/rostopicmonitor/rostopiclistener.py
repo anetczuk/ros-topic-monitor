@@ -8,12 +8,10 @@
 
 import logging
 
-import rospy
-import rostopic
-
 from rostopicmonitor.topiclistener import TopicListener
 from rostopicmonitor.sizecalculator import AbstractCalculator
 from rostopicmonitor.rossizecalculator import generate_calculator
+from rostopicmonitor.rosutils import ros_subscribe, get_topic_class
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class ROSTopicListener(TopicListener):
     def __init__(self, topic_name):
-        topic_data = rostopic.get_topic_class(topic_name)
+        topic_data = get_topic_class(topic_name)
         topic_type = topic_data[0]
         self.message_class = topic_type
         message_calc: AbstractCalculator = generate_calculator(self.message_class)
@@ -33,4 +31,4 @@ class ROSTopicListener(TopicListener):
     def start(self):
         super().start()
         _LOGGER.info("subscribing to topic: %s fixed: %s", self.topic_name, self.message_calc.isFixed())
-        rospy.Subscriber(self.topic_name, self.message_class, self.updateStats)
+        ros_subscribe(self.topic_name, self.message_class, self.updateStats)
