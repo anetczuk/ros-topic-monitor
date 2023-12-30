@@ -13,6 +13,8 @@ import logging
 import argparse
 import re
 import datetime
+import json
+from typing import Dict
 
 import rostopic
 import rospy
@@ -22,6 +24,7 @@ from rostopicmonitor.topicstats import WindowTopicStats, RawTopicStats
 from rostopicmonitor.writer.jsonwriter import write_json_file, write_json_dir
 from rostopicmonitor.writer.pandaswriter import write_pandas_file, write_pandas_dir, summary_to_numpy
 from rostopicmonitor.utils import convert_listdicts_dictlists
+from rostopicmonitor.topiclistener import TopicListener
 
 
 _MAIN_LOGGER_NAME = "rostopicmonitor"
@@ -43,7 +46,7 @@ def process_list(_):
 
 def process_raw(args):
     topic_filter = args.topic
-    listeners_dict = init_listeners(topic_filter)
+    listeners_dict: Dict[str, TopicListener] = init_listeners(topic_filter)
 
     # listener: TopicListener
     for listener in listeners_dict.values():
@@ -55,6 +58,41 @@ def process_raw(args):
 
 
 def process_stats(args):
+    if args.fromrawfile:
+        process_stats_file(args)
+    else:
+        process_stats_ros(args)
+
+
+def process_stats_file(args):
+    topic_filter = args.topic
+    in_raw_file = args.fromrawfile
+    in_raw_file = os.path.abspath(in_raw_file)
+
+    _LOGGER.info("Loading raw data from file %s", in_raw_file)
+
+    with open(in_raw_file, "r", encoding="utf8") as fp:
+        raw_dict = json.load(fp)
+
+    topics_list = list(raw_dict.keys())
+    topics_list = filter_items(topics_list, topic_filter)
+
+    window_size = args.window
+
+    # listener: TopicListener
+    listeners_dict: Dict[str, TopicListener] = {}
+    for topic in topics_list:
+        listener = ROSTopicListener(topic)
+        data_dict = raw_dict.get(topic, {})
+        collector = WindowTopicStats(window_size)
+        collector.setSamplesFromDict(data_dict)
+        listener.setStatsCollector(collector)
+        listeners_dict[topic] = listener
+
+    store_data(listeners_dict, args)
+
+
+def process_stats_ros(args):
     topic_filter = args.topic
     listeners_dict = init_listeners(topic_filter)
 
@@ -72,26 +110,24 @@ def process_stats(args):
 # ============================================================
 
 
-def init_listeners(topic_filter):
+def init_listeners(topic_filter) -> Dict[str, TopicListener]:
     try:
         topics_list = get_all_publishers()
     except ConnectionRefusedError:
         _LOGGER.error("master not running")
         return {}
 
-    topics_list = filter_items(topics_list, topic_filter)
-
-    # ['/rosout', '/rosout_agg', '/turtle1/cmd_vel', '/turtle1/color_sensor', '/turtle1/pose']
     _LOGGER.info("subscribing to topics: %s", topics_list)
 
-    listeners_dict = {}
+    topics_list = filter_items(topics_list, topic_filter)
+    listeners_dict: Dict[str, TopicListener] = {}
     for topic in topics_list:
         topic_stats = ROSTopicListener(topic)
         listeners_dict[topic] = topic_stats
     return listeners_dict
 
 
-def execute_listeners(listeners_dict, args):
+def execute_listeners(listeners_dict: Dict[str, TopicListener], args):
     init_ros_node(args.logall)
 
     for listener in listeners_dict.values():
@@ -117,7 +153,7 @@ def execute_listeners(listeners_dict, args):
         listener.stop()
 
 
-def store_data(listeners_dict, args):
+def store_data(listeners_dict: Dict[str, TopicListener], args):
     if not listeners_dict:
         return
 
@@ -126,7 +162,7 @@ def store_data(listeners_dict, args):
     if not out_file and not out_dir:
         # nothing to store
         _LOGGER.info("Calculating summary")
-        data_dict = get_stats(listeners_dict, with_data=False)
+        data_dict = get_stats_summary(listeners_dict)
         summary_dict = calculate_summary(data_dict)
         summary_dataframe = summary_to_numpy(summary_dict)
         _LOGGER.info("Summary:\n%s", summary_dataframe)
@@ -134,10 +170,20 @@ def store_data(listeners_dict, args):
         return
 
     _LOGGER.info("Calculating statistics")
-    data_dict = get_stats(listeners_dict, with_data=True)
+    data_dict = get_stats(listeners_dict)
 
-    summary_dict = {}
+    out_format = args.outformat
     calc_summary = not args.nosummary
+
+    store_data_dict(data_dict, out_file, out_dir, out_format, calc_summary)
+
+    if "storeraw" in args and args.storeraw:
+        raw_dict = get_stats_raw(listeners_dict)
+        store_raw_data(raw_dict, out_file, out_dir)
+
+
+def store_data_dict(data_dict, out_file=None, out_dir=None, out_format=None, calc_summary=None):
+    summary_dict = {}
     if calc_summary:
         # calculate summary dict
         _LOGGER.info("Calculating summary")
@@ -145,7 +191,6 @@ def store_data(listeners_dict, args):
         summary_dataframe = summary_to_numpy(summary_dict)
         _LOGGER.info("Summary:\n%s", summary_dataframe)
 
-    out_format = args.outformat
     if out_format == "json":
         if out_file:
             _LOGGER.info("Writing output to file: %s", out_file)
@@ -171,16 +216,40 @@ def store_data(listeners_dict, args):
             write_pandas_dir(out_dir, data_dict, out_format, summary_dict)
 
 
-def get_stats(listeners_dict, with_data=True):
+def store_raw_data(data_dict, out_file=None, out_dir=None):
+    # get_stats_raw
+    if out_file:
+        out_raw_path = f"{out_file}.raw.json"
+        write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
+
+    if out_dir:
+        out_raw_path = os.path.join(out_dir, "raw_data.json")
+        write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
+
+
+def get_stats(listeners_dict: Dict[str, TopicListener]):
     data_dict = {}
-    if with_data:
-        for topic, listener in listeners_dict.items():
-            stats_data = listener.getStats()
-            data_dict[topic] = stats_data
-    else:
-        for topic, listener in listeners_dict.items():
-            stats_data = listener.getStatsSummary()
-            data_dict[topic] = stats_data
+    for topic, listener in listeners_dict.items():
+        stats_data = listener.getStats()
+        data_dict[topic] = stats_data
+    data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
+    return data_dict
+
+
+def get_stats_raw(listeners_dict: Dict[str, TopicListener]):
+    data_dict = {}
+    for topic, listener in listeners_dict.items():
+        stats_data = listener.getStatsRaw()
+        data_dict[topic] = stats_data
+    data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
+    return data_dict
+
+
+def get_stats_summary(listeners_dict: Dict[str, TopicListener]):
+    data_dict = {}
+    for topic, listener in listeners_dict.items():
+        stats_data = listener.getStatsSummary()
+        data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
     return data_dict
 
@@ -339,6 +408,44 @@ def main():
     subparser.description = description
     subparser.set_defaults(func=process_raw)
     add_common_args(subparser)
+    #
+    # ## =================================================
+    #
+    # description = "convert json data to other format"
+    # subparser = subparsers.add_parser("convert", help=description)
+    # subparser.description = description
+    # subparser.set_defaults(func=process_convert)
+    # subparser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
+    # subparser.add_argument(
+    #     "--infile",
+    #     action="store",
+    #     required=False,
+    #     default="",
+    #     help="Path to input file (with collected data).",
+    # )
+    # subparser.add_argument("--nosummary", action="store_true", help="Do not generate topics summary.")
+    # subparser.add_argument(
+    #     "--outfile",
+    #     action="store",
+    #     required=False,
+    #     default="",
+    #     help="Path to output file.",
+    # )
+    # # subparser.add_argument(
+    # #     "--outdir",
+    # #     action="store",
+    # #     required=False,
+    # #     default="",
+    # #     help="Path to output dir (store collected data in directory).",
+    # # )
+    # subparser.add_argument(
+    #     "--outformat",
+    #     action="store",
+    #     required=False,
+    #     choices=["csv", "xls", "xlsx"],
+    #     default="csv",
+    #     help="Output format. Default: %(default)s.",
+    # )
 
     ## =================================================
 
@@ -354,6 +461,10 @@ def main():
         type=int_positive,
         default=0,
         help="Set window size, otherwise collect all samples.",
+    )
+    subparser.add_argument("--storeraw", action="store_true", help="Store raw data additionally.")
+    subparser.add_argument(
+        "--fromrawfile", action="store", required=False, default=None, help="Path to raw file to get data from."
     )
 
     ## =================================================
@@ -374,6 +485,8 @@ def main():
         return 1
 
     args.func(args)
+
+    _LOGGER.info("Completed")
     return 0
 
 

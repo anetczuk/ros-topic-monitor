@@ -41,7 +41,7 @@ class TopicListenerTest(unittest.TestCase):
         topic_mon.start()
 
         time.sleep(0.2)
-        topic_mon.update(None)
+        topic_mon.updateStats(None)
         time.sleep(0.2)
 
         topic_mon.stop()
@@ -54,12 +54,6 @@ class TopicListenerTest(unittest.TestCase):
 
 
 class TopicListenerMock(TopicListener):
-    def update(self, data):
-        self._updateState(data)
-
-    def _generateCalculator(self) -> AbstractCalculator:
-        return generate_calculator_mock(self.message_class)
-
-    def _startMonitor(self):
-        # do nothing
-        pass
+    def __init__(self, topic_name, topic_type):
+        message_calc: AbstractCalculator = generate_calculator_mock(topic_type)
+        super().__init__(topic_name, message_calc)

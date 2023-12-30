@@ -52,11 +52,19 @@ class BaseTopicStats(ABC):
         raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
+    def setSamplesFromDict(self, stats_dict):
+        raise NotImplementedError("You need to define this method in derived class!")
+
+    @abstractmethod
     def update(self, data_time, data_size):
         raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
     def getStats(self):
+        raise NotImplementedError("You need to define this method in derived class!")
+
+    @abstractmethod
+    def getStatsRaw(self):
         raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
@@ -71,6 +79,12 @@ class RawTopicStats(BaseTopicStats):
     def reset(self):
         self.samples = []
 
+    def setSamplesFromDict(self, stats_dict):
+        samples_dict = stats_dict.get("data", {})
+        timestamps = samples_dict.get("time", [])
+        sizes = samples_dict.get("size", [])
+        self.samples = list(zip(timestamps, sizes))
+
     def getDuration(self):
         if not self.samples:
             return 0.0
@@ -80,6 +94,13 @@ class RawTopicStats(BaseTopicStats):
         self.samples.append((data_time, data_size))
 
     def getStats(self):
+        stats_dict = self.getStatsSummary()
+        timestamps = [sample[0] for sample in self.samples]
+        sizes = [sample[1] for sample in self.samples]
+        stats_dict["data"] = {"time": timestamps, "size": sizes}
+        return stats_dict
+
+    def getStatsRaw(self):
         stats_dict = self.getStatsSummary()
         timestamps = [sample[0] for sample in self.samples]
         sizes = [sample[1] for sample in self.samples]

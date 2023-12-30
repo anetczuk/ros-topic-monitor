@@ -26,11 +26,11 @@ class ROSTopicListener(TopicListener):
     def __init__(self, topic_name):
         topic_data = rostopic.get_topic_class(topic_name)
         topic_type = topic_data[0]
-        super().__init__(topic_name, topic_type)
+        self.message_class = topic_type
+        message_calc: AbstractCalculator = generate_calculator(self.message_class)
+        super().__init__(topic_name, message_calc)
 
-    def _generateCalculator(self) -> AbstractCalculator:
-        return generate_calculator(self.message_class)
-
-    def _startMonitor(self):
+    def start(self):
+        super().start()
         _LOGGER.info("subscribing to topic: %s fixed: %s", self.topic_name, self.message_calc.isFixed())
-        rospy.Subscriber(self.topic_name, self.message_class, self._updateState)
+        rospy.Subscriber(self.topic_name, self.message_class, self.updateStats)
