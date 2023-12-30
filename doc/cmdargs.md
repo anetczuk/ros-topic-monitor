@@ -67,7 +67,7 @@ usage: rostopicmon.py stats [-h] [-la] [--topic N [N ...]]
                             [--duration DURATION] [--nosummary]
                             [--outfile OUTFILE] [--outdir OUTDIR]
                             [--outformat {json,csv,xls,xlsx}] [-w WINDOW]
-                            [--storeraw] [--fromrawfile FROMRAWFILE]
+                            [--nostoreraw] [--fromrawfile FROMRAWFILE]
 
 collect and store stats data
 
@@ -88,7 +88,7 @@ optional arguments:
                         Output format. Default: json.
   -w WINDOW, --window WINDOW
                         Set window size, otherwise collect all samples.
-  --storeraw            Store raw data additionally.
+  --nostoreraw          Do not store raw data additionally.
   --fromrawfile FROMRAWFILE
                         Path to raw file to get data from.
 ```

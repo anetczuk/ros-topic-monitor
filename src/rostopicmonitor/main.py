@@ -168,7 +168,7 @@ def store_data(listeners_dict: Dict[str, TopicListener], args):
 
     store_data_dict(data_dict, out_file, out_dir, out_format, calc_summary)
 
-    if "storeraw" in args and args.storeraw:
+    if "nostoreraw" in args and not args.nostoreraw:
         raw_dict = get_stats_raw(listeners_dict)
         store_raw_data(raw_dict, out_file, out_dir)
 
@@ -211,10 +211,12 @@ def store_raw_data(data_dict, out_file=None, out_dir=None):
     # get_stats_raw
     if out_file:
         out_raw_path = f"{out_file}.raw.json"
+        _LOGGER.info("Writing raw data to file: %s", out_raw_path)
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
     if out_dir:
         out_raw_path = os.path.join(out_dir, "raw_data.json")
+        _LOGGER.info("Writing raw data to file: %s", out_raw_path)
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
 
@@ -388,44 +390,6 @@ def main():
     subparser.description = description
     subparser.set_defaults(func=process_raw)
     add_common_args(subparser)
-    #
-    # ## =================================================
-    #
-    # description = "convert json data to other format"
-    # subparser = subparsers.add_parser("convert", help=description)
-    # subparser.description = description
-    # subparser.set_defaults(func=process_convert)
-    # subparser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
-    # subparser.add_argument(
-    #     "--infile",
-    #     action="store",
-    #     required=False,
-    #     default="",
-    #     help="Path to input file (with collected data).",
-    # )
-    # subparser.add_argument("--nosummary", action="store_true", help="Do not generate topics summary.")
-    # subparser.add_argument(
-    #     "--outfile",
-    #     action="store",
-    #     required=False,
-    #     default="",
-    #     help="Path to output file.",
-    # )
-    # # subparser.add_argument(
-    # #     "--outdir",
-    # #     action="store",
-    # #     required=False,
-    # #     default="",
-    # #     help="Path to output dir (store collected data in directory).",
-    # # )
-    # subparser.add_argument(
-    #     "--outformat",
-    #     action="store",
-    #     required=False,
-    #     choices=["csv", "xls", "xlsx"],
-    #     default="csv",
-    #     help="Output format. Default: %(default)s.",
-    # )
 
     ## =================================================
 
@@ -442,7 +406,7 @@ def main():
         default=0,
         help="Set window size, otherwise collect all samples.",
     )
-    subparser.add_argument("--storeraw", action="store_true", help="Store raw data additionally.")
+    subparser.add_argument("--nostoreraw", action="store_true", help="Do not store raw data additionally.")
     subparser.add_argument(
         "--fromrawfile", action="store", required=False, default=None, help="Path to raw file to get data from."
     )
