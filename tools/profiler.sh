@@ -3,6 +3,12 @@
 set -eu
 
 
+##
+## Profile Python script. Running example:
+##      profiler.sh script.py [script_args]
+##
+
+
 ## SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 

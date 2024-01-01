@@ -78,7 +78,7 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertEqual(stats["total_freq"], 10.0)
         self.assertEqual(stats["total_bw"], 120)
         samples = stats["data"]
-        self.assertEqual(len(samples), 12)
+        self.assertEqual(len(samples), 11)
         self.assertEqual(samples["time"][0], 0.1)
         self.assertEqual(
             {
@@ -86,7 +86,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.1,
                 "dt_min": 0.1,
-                "dt_stddev": 0.0,
                 "freq": 10.0,
                 "size": 6,
                 "size_max": 6,
@@ -102,7 +101,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.1,
                 "dt_min": 0.1,
-                "dt_stddev": 0.0,
                 "freq": 10.0,
                 "size": 10,
                 "size_max": 10,
@@ -118,7 +116,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.09999999999999999,
                 "dt_min": 0.09999999999999998,
-                "dt_stddev": 1.3877787807814457e-17,
                 "freq": 10.0,
                 "size": 20,
                 "size_max": 20,
@@ -144,7 +141,7 @@ class WindowTopicStatsTest(unittest.TestCase):
         self.assertEqual(stats["total_freq"], 10.0)
         self.assertEqual(stats["total_bw"], 120)
         samples = stats["data"]
-        self.assertEqual(len(samples), 12)
+        self.assertEqual(len(samples), 11)
         self.assertEqual(samples["time"][0], 0.1)
         self.assertEqual(
             {
@@ -152,7 +149,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.1,
                 "dt_min": 0.1,
-                "dt_stddev": 0.0,
                 "freq": 10.0,
                 "size": 6,
                 "size_max": 6,
@@ -168,7 +164,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.1,
                 "dt_min": 0.1,
-                "dt_stddev": 0.0,
                 "freq": 10.0,
                 "size": 10,
                 "size_max": 10,
@@ -184,7 +179,6 @@ class WindowTopicStatsTest(unittest.TestCase):
                 "dt_max": 0.1,
                 "dt_mean": 0.09999999999999999,
                 "dt_min": 0.09999999999999998,
-                "dt_stddev": 1.3877787807814457e-17,
                 "freq": 10.0,
                 "size": 20,
                 "size_max": 20,

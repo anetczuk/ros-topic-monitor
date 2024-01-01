@@ -60,7 +60,7 @@ class BaseTopicStats(ABC):
         raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
-    def getStats(self):
+    def getStats(self, stddev=True):
         raise NotImplementedError("You need to define this method in derived class!")
 
     @abstractmethod
@@ -93,7 +93,7 @@ class RawTopicStats(BaseTopicStats):
     def update(self, data_time, data_size):
         self.samples.append((data_time, data_size))
 
-    def getStats(self):
+    def getStats(self, stddev=True):
         stats_dict = self.getStatsSummary()
         timestamps = [sample[0] for sample in self.samples]
         sizes = [sample[1] for sample in self.samples]
@@ -136,7 +136,7 @@ class WindowTopicStats(RawTopicStats):
         super().__init__()
         self.window_size = window_size
 
-    def getStats(self):
+    def getStats(self, stddev=True):
         stats_dict = self.getStatsSummary()
 
         dict_list = []
@@ -150,12 +150,12 @@ class WindowTopicStats(RawTopicStats):
             time_diff = data[0] - prev_time
             prev_time = data[0]
             time_buffer.add(time_diff)
-            time_data = time_buffer.getData("dt")
+            time_data = time_buffer.getData("dt", stddev=False)  # do not calc stddev of time in any circumstances
             sample_dict.update(time_data)
             sample_dict.update({"freq": 1.0 / time_buffer.mean()})
 
             size_buffer.add(data[1])
-            size_data = size_buffer.getData("size")
+            size_data = size_buffer.getData("size", stddev=stddev)
             sample_dict.update(size_data)
 
             time_diff = time_buffer.sum()

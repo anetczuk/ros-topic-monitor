@@ -24,8 +24,8 @@ class StatsObject:
         self.header = header_dict
         self.stats: BaseTopicStats = stats
 
-    def getStats(self):
-        stats_dict = self.stats.getStats()
+    def getStats(self, stddev=True):
+        stats_dict = self.stats.getStats(stddev=stddev)
         topic_data = self.header.copy()
         topic_data.update(stats_dict)
         return topic_data

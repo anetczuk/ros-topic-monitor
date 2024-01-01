@@ -173,7 +173,8 @@ def store_data(stats_dict: Dict[str, StatsObject], args):
         return
 
     _LOGGER.info("Calculating statistics")
-    data_dict = get_stats(stats_dict)
+    calc_stddev = args.calcstddev
+    data_dict = get_stats(stats_dict, stddev=calc_stddev)
 
     out_format = args.outformat
     calc_summary = not args.nosummary
@@ -231,10 +232,10 @@ def store_raw_data(data_dict, out_file=None, out_dir=None):
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
 
-def get_stats(stats_dict: Dict[str, StatsObject]):
+def get_stats(stats_dict: Dict[str, StatsObject], stddev=True):
     data_dict = {}
-    for topic, listener in stats_dict.items():
-        stats_data = listener.getStats()
+    for topic, stats_obj in stats_dict.items():
+        stats_data = stats_obj.getStats(stddev=stddev)
         data_dict[topic] = stats_data
     data_dict = dict(sorted(data_dict.items()))  # sort keys in dict
     return data_dict
@@ -354,6 +355,7 @@ def add_common_args(parser):
         help="Set monitor time in seconds. Stop application after timeout.",
     )
     parser.add_argument("--nosummary", action="store_true", help="Do not generate topics summary.")
+    parser.add_argument("--calcstddev", action="store_true", help="Calculate standard deviation (time consuming).")
     parser.add_argument(
         "--outfile",
         action="store",
