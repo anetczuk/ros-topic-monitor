@@ -172,6 +172,10 @@ def store_data(stats_dict: Dict[str, StatsObject], args):
         _LOGGER.info("nothing to store (no file or dir passed to store data)")
         return
 
+    if "nostoreraw" in args and not args.nostoreraw:
+        raw_dict = get_stats_raw(stats_dict)
+        store_raw_data(raw_dict, out_file, out_dir)
+
     _LOGGER.info("Calculating statistics")
     calc_stddev = args.calcstddev
     data_dict = get_stats(stats_dict, stddev=calc_stddev)
@@ -180,10 +184,6 @@ def store_data(stats_dict: Dict[str, StatsObject], args):
     calc_summary = not args.nosummary
 
     store_data_dict(data_dict, out_file, out_dir, out_format, calc_summary)
-
-    if "nostoreraw" in args and not args.nostoreraw:
-        raw_dict = get_stats_raw(stats_dict)
-        store_raw_data(raw_dict, out_file, out_dir)
 
 
 def store_data_dict(data_dict, out_file=None, out_dir=None, out_format=None, calc_summary=None):
