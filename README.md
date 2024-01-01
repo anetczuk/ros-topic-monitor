@@ -35,7 +35,19 @@ to receive [cmd help](doc/cmdargs.md).
 
 To grab stats from all topics simply run `python3 -m rostopicmonitor stats --outdir outdata`
 
+Running preselected topics goes like this: `python3 -m rostopicmonitor stats --outdir outdata --topic '/turtle1/.*'` 
+In this case `turtlesim` topics will be monitored.
+
 For more advanced usage see [help](doc/cmdargs.md).
+
+
+## Units
+
+Uses following units:
+- size: *Byte*,
+- time: *Second*,
+- frequency: *Hertz*,
+- bandwidth: *Bytes per Second*
 
 
 ## References

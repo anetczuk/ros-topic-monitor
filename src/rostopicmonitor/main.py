@@ -338,14 +338,13 @@ def get_publishers():
 
 
 def add_common_args(parser):
-    parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
     parser.add_argument(
         "--topic",
         metavar="N",
         type=str,
         nargs="+",
-        help="Space separated list of regex strings applied on found topics to listen on. "
-        "Example: '--topic '/turtle1/.*' '/ros.*'",
+        help="""Space separated list of regex strings applied on found topics to listen on. """
+        """Example: "--topic '/turtle1/.*' '/ros.*'" """,
     )
     parser.add_argument(
         "--duration",
@@ -356,6 +355,7 @@ def add_common_args(parser):
     )
     parser.add_argument("--nosummary", action="store_true", help="Do not generate topics summary.")
     parser.add_argument("--calcstddev", action="store_true", help="Calculate standard deviation (time consuming).")
+    parser.add_argument("-la", "--logall", action="store_true", help="Log all messages")
     parser.add_argument(
         "--outfile",
         action="store",
@@ -421,7 +421,6 @@ def main():
     subparser = subparsers.add_parser("stats", help=description)
     subparser.description = description
     subparser.set_defaults(func=process_stats)
-    add_common_args(subparser)
     subparser.add_argument(
         "-w",
         "--window",
@@ -434,6 +433,7 @@ def main():
     subparser.add_argument(
         "--fromrawfile", action="store", required=False, default=None, help="Path to raw file to get data from."
     )
+    add_common_args(subparser)
 
     ## =================================================
 

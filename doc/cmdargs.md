@@ -36,22 +36,23 @@ optional arguments:
 
 ## <a name="raw_help"></a> rostopicmon.py raw --help
 ```
-usage: rostopicmon.py raw [-h] [-la] [--topic N [N ...]] [--duration DURATION]
-                          [--nosummary] [--calcstddev] [--outfile OUTFILE]
-                          [--outdir OUTDIR] [--outformat {json,csv,xls,xlsx}]
+usage: rostopicmon.py raw [-h] [--topic N [N ...]] [--duration DURATION]
+                          [--nosummary] [--calcstddev] [-la]
+                          [--outfile OUTFILE] [--outdir OUTDIR]
+                          [--outformat {json,csv,xls,xlsx}]
 
 collect and store raw data (sizes of messages)
 
 optional arguments:
   -h, --help            show this help message and exit
-  -la, --logall         Log all messages
   --topic N [N ...]     Space separated list of regex strings applied on found
-                        topics to listen on. Example: '--topic '/turtle1/.*'
-                        '/ros.*'
+                        topics to listen on. Example: "--topic '/turtle1/.*'
+                        '/ros.*'"
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
   --nosummary           Do not generate topics summary.
   --calcstddev          Calculate standard deviation (time consuming).
+  -la, --logall         Log all messages
   --outfile OUTFILE     Path to output file (store collected data in single
                         file).
   --outdir OUTDIR       Path to output dir (store collected data in
@@ -64,33 +65,33 @@ optional arguments:
 
 ## <a name="stats_help"></a> rostopicmon.py stats --help
 ```
-usage: rostopicmon.py stats [-h] [-la] [--topic N [N ...]]
+usage: rostopicmon.py stats [-h] [-w WINDOW] [--nostoreraw]
+                            [--fromrawfile FROMRAWFILE] [--topic N [N ...]]
                             [--duration DURATION] [--nosummary] [--calcstddev]
-                            [--outfile OUTFILE] [--outdir OUTDIR]
-                            [--outformat {json,csv,xls,xlsx}] [-w WINDOW]
-                            [--nostoreraw] [--fromrawfile FROMRAWFILE]
+                            [-la] [--outfile OUTFILE] [--outdir OUTDIR]
+                            [--outformat {json,csv,xls,xlsx}]
 
 collect and store stats data
 
 optional arguments:
   -h, --help            show this help message and exit
-  -la, --logall         Log all messages
+  -w WINDOW, --window WINDOW
+                        Set window size, otherwise collect all samples.
+  --nostoreraw          Do not store raw data additionally.
+  --fromrawfile FROMRAWFILE
+                        Path to raw file to get data from.
   --topic N [N ...]     Space separated list of regex strings applied on found
-                        topics to listen on. Example: '--topic '/turtle1/.*'
-                        '/ros.*'
+                        topics to listen on. Example: "--topic '/turtle1/.*'
+                        '/ros.*'"
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
   --nosummary           Do not generate topics summary.
   --calcstddev          Calculate standard deviation (time consuming).
+  -la, --logall         Log all messages
   --outfile OUTFILE     Path to output file (store collected data in single
                         file).
   --outdir OUTDIR       Path to output dir (store collected data in
                         directory).
   --outformat {json,csv,xls,xlsx}
                         Output format. Default: json.
-  -w WINDOW, --window WINDOW
-                        Set window size, otherwise collect all samples.
-  --nostoreraw          Do not store raw data additionally.
-  --fromrawfile FROMRAWFILE
-                        Path to raw file to get data from.
 ```
