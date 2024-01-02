@@ -46,8 +46,9 @@ collect and store raw data (sizes of messages)
 optional arguments:
   -h, --help            show this help message and exit
   --topic N [N ...]     Space separated list of regex strings applied on found
-                        topics to listen on. Example: "--topic '/turtle1/.*'
-                        '/ros.*'"
+                        topics to listen on. It can also be paths to files
+                        with regexes. Or mix of both. Example: "--topic
+                        '/turtle1/.*' '/ros.*'"
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
   --nosummary           Do not generate topics summary.
@@ -81,8 +82,9 @@ optional arguments:
   --fromrawfile FROMRAWFILE
                         Path to raw file to get data from.
   --topic N [N ...]     Space separated list of regex strings applied on found
-                        topics to listen on. Example: "--topic '/turtle1/.*'
-                        '/ros.*'"
+                        topics to listen on. It can also be paths to files
+                        with regexes. Or mix of both. Example: "--topic
+                        '/turtle1/.*' '/ros.*'"
   --duration DURATION   Set monitor time in seconds. Stop application after
                         timeout.
   --nosummary           Do not generate topics summary.

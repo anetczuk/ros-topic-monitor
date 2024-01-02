@@ -42,6 +42,7 @@ def process_list(_):
 
 def process_raw(args):
     topic_filter = args.topic
+    topic_filter = get_topic_filters(topic_filter)
     listeners_dict: Dict[str, TopicListener] = init_listeners(topic_filter)
 
     # listener: TopicListener
@@ -90,6 +91,7 @@ def process_stats_file(args):
 
 def process_stats_ros(args):
     topic_filter = args.topic
+    topic_filter = get_topic_filters(topic_filter)
     listeners_dict = init_listeners(topic_filter)
 
     window_size = args.window
@@ -267,6 +269,26 @@ def calculate_summary(data_dict):
     return summary_dict
 
 
+def get_topic_filters(topic_filer_data_list):
+    if topic_filer_data_list is None:
+        return None
+    topic_filters = []
+    for filter_item in topic_filer_data_list:
+        if not os.path.isfile(filter_item):
+            # not a file -- assume normal regex
+            topic_filters.append(filter_item)
+        # existing file - read regexes from it
+        with open(filter_item, "r", encoding="utf8") as fp:
+            regex_lines = fp.readlines()
+            for file_item in regex_lines:
+                item = file_item.strip()  # we do not want any prefix/suffix whitespaces or newline characters
+                if not item:
+                    # skip empty string
+                    continue
+                topic_filters.append(item)
+    return topic_filters
+
+
 def filter_items(items_list, regex_list):
     if not items_list:
         return items_list
@@ -343,8 +365,9 @@ def add_common_args(parser):
         metavar="N",
         type=str,
         nargs="+",
-        help="""Space separated list of regex strings applied on found topics to listen on. """
-        """Example: "--topic '/turtle1/.*' '/ros.*'" """,
+        help="""Space separated list of regex strings applied on found topics to listen on."""
+        """ It can also be paths to files with regexes. Or mix of both."""
+        """ Example: "--topic '/turtle1/.*' '/ros.*'" """,
     )
     parser.add_argument(
         "--duration",
