@@ -138,7 +138,7 @@ def execute_listeners(listeners_dict: Dict[str, TopicListener], args):
     for listener in listeners_dict.values():
         listener.start()
 
-    _LOGGER.info("Starting listening")
+    _LOGGER.info("Starting listening. Press CTRL+C to stop and write data.")
 
     start_time = datetime.datetime.now()
 
@@ -226,11 +226,14 @@ def store_raw_data(data_dict, out_file=None, out_dir=None):
     if out_file:
         out_raw_path = f"{out_file}.raw.json"
         _LOGGER.info("Writing raw data to file: %s", out_raw_path)
+        dir_path = os.path.dirname(os.path.realpath(out_raw_path))
+        os.makedirs(dir_path, exist_ok=True)
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
     if out_dir:
         out_raw_path = os.path.join(out_dir, "raw_data.json")
         _LOGGER.info("Writing raw data to file: %s", out_raw_path)
+        os.makedirs(out_dir, exist_ok=True)
         write_json_file(out_raw_path, data_dict)  # do not store summary_dict in single file mode
 
 
